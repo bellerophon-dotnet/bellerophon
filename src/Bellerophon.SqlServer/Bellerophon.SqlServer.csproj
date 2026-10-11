@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The SQL Server persistence runtime: the fixed code the generated database writer and loader call (schema checks, table
+    types, table-valued parameters).  A project that references this library also gets a
+    generated {Model}SqlDatabase for its model.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>Bellerophon.SqlServer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+  </ItemGroup>
+
+</Project>

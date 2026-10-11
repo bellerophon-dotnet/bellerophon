@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Stands in for the hand-built TangentAtlas package, which supplies the enums and custom types the model's datatypes
+    name.  Bellerophon does not generate these; it resolves them by name from whatever the project references.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>AtlasLedger.Model</RootNamespace>
+  </PropertyGroup>
+
+</Project>

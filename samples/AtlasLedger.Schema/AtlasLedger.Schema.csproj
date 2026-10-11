@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Atlas Ledger database schema (the Schema role): an Entity Framework Core model generated from the server's model
+    file, and its migrations.  It is used to create and evolve the database, never to read or write the ledger: the server's
+    generated LedgerSqlDatabase does that, with the same column types.
+
+    The README's "Persistence" section shows the commands that add and apply migrations.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>AtlasLedger.Schema</RootNamespace>
+    <BellerophonRole>Schema</BellerophonRole>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <!-- Stands in for the NuGet package reference, which imports this file automatically. -->
+  <Import Project="..\..\src\Bellerophon.Generator\build\Bellerophon.Generator.props" />
+
+  <ItemGroup>
+    <!-- The server owns the model; the schema generates from the same file. -->
+    <AdditionalFiles Include="..\AtlasLedger.Server\bellerophon.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bellerophon.Generator\Bellerophon.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\TangentAtlas\TangentAtlas.csproj" />
+  </ItemGroup>
+
+</Project>

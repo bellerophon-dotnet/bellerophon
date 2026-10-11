@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    End-to-end tests: the real server and the real client, in one process, over HTTP on a free local port.  The two
+    programs generate the same model namespaces (one as Primary, one as Replica), so each is referenced under an alias.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- See Bellerophon.Tests: xunit.v3 on Microsoft Testing Platform v2, opted into by global.json. -->
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\samples\AtlasLedger.Server\AtlasLedger.Server.csproj" Aliases="server" />
+    <ProjectReference Include="..\..\samples\AtlasLedger.Client\AtlasLedger.Client.csproj" Aliases="client" />
+  </ItemGroup>
+
+</Project>

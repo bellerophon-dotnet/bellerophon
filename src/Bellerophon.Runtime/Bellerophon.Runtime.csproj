@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Fixed runtime code referenced by generated code: today, the OAuth scope check behind every generated access policy.
+    Later: transactions, locks, sequencing, and the write-behind flusher.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>Bellerophon.Runtime</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

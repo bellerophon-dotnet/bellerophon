@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The compliance engine's host: one rules session per tenant, fed by the tenant's change feed and latest values, evaluated
+    in cycles, with the rules' decisions committed in one transaction per cycle.  It depends on no rules engine: a session
+    adapter (Bellerophon.Rules.NRules) connects a real one.  A project that references this library also gets a generated
+    adapter for its model ({Model}RulesTenant).
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>Bellerophon.Rules</RootNamespace>
+  </PropertyGroup>
+
+</Project>

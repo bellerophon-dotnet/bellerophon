@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Debug against the server sample": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\AtlasLedger.Server\\AtlasLedger.Server.csproj"
+    }
+  }
+}

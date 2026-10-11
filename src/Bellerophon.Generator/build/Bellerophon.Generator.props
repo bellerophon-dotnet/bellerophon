@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Ships in the package's build folder, so NuGet imports it into every project that references Bellerophon.
+    A consuming project then declares only its role, and keeps its model in a bellerophon.json in the project folder.
+    A project that shares another project's model (a client sharing the server's) adds that file with its own
+    AdditionalFiles line instead.
+  -->
+
+  <ItemGroup>
+    <!-- Lets the generator see the project's role (Primary or Replica). -->
+    <CompilerVisibleProperty Include="BellerophonRole" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\bellerophon.json')">
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)\bellerophon.json" />
+  </ItemGroup>
+
+</Project>

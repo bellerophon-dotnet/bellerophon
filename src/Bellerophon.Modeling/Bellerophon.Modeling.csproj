@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The parser, semantic model, validation, and JSON writer.  Shared by every host: the source generator links these
+    sources directly (so the compiler loads a single assembly), and the command-line tool references this project.
+    Targets netstandard2.0 because the compiler hosts it inside Visual Studio.  Keep it dependency-free.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Bellerophon.Modeling</RootNamespace>
+  </PropertyGroup>
+
+</Project>

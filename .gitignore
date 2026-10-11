@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test output
+TestResults/
+test-results.txt
+
+# Offline package downloads: restored from NuGet, never committed
+packages/
+persistence/
+*.nupkg
+*.zip

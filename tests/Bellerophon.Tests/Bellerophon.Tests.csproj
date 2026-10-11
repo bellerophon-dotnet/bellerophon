@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- xUnit v3 test projects are self-hosting executables. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The generated controllers and policies compile against ASP.NET Core, so the generator tests need it too. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      xunit.v3 runs on Microsoft Testing Platform v2, so the project needs neither Microsoft.NET.Test.Sdk nor
+      xunit.runner.visualstudio (VSTest).  global.json at the repository root opts dotnet test into the platform.
+    -->
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <!--
+      The tests compile the generated code in memory, so they need a compiler at least as new as the C# the generated code
+      targets (C# 13 or later; .NET 10 ships Roslyn 5.0).  The generator itself stays on 4.8.0 so older hosts can load it.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bellerophon.Modeling\Bellerophon.Modeling.csproj" />
+    <ProjectReference Include="..\..\src\Bellerophon.Runtime\Bellerophon.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\Bellerophon.Rules\Bellerophon.Rules.csproj" />
+    <ProjectReference Include="..\..\src\Bellerophon.Rules.NRules\Bellerophon.Rules.NRules.csproj" />
+    <!-- The generated database code compiles against these; each test chooses whether the compilation can see them. -->
+    <ProjectReference Include="..\..\src\Bellerophon.SqlServer\Bellerophon.SqlServer.csproj" />
+    <!-- The generator compiles the modeling sources into itself, so its copies are kept under an alias to avoid type conflicts. -->
+    <ProjectReference Include="..\..\src\Bellerophon.Generator\Bellerophon.Generator.csproj" Aliases="generator" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\samples\AtlasLedger.Server\bellerophon.json" Link="Fixtures\bellerophon.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\samples\TangentAtlas\Enums.cs" Link="Fixtures\Enums.cs.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

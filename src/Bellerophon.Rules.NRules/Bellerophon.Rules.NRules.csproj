@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Connects NRules to the rules host: each tenant gets its own NRules session, compiled once from your rule repository,
+    whose rules resolve the tenant's rule actions (and partition) as dependencies.
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>Bellerophon.Rules.NRules</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Match the version your rules already use. -->
+    <PackageReference Include="NRules" Version="1.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bellerophon.Rules\Bellerophon.Rules.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The command-line tool: model validation today; baseline promotion, database migrations, release model-diff reports,
+    and code metrics later.  Packaged as a .NET tool whose command is 'bell'.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
+    <RootNamespace>Bellerophon.Tool</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>bell</ToolCommandName>
+    <PackageId>Bellerophon.Tool</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bellerophon.Modeling\Bellerophon.Modeling.csproj" />
+  </ItemGroup>
+
+</Project>

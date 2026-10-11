@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Company>Tangent Atlas</Company>
+    <Product>Bellerophon</Product>
+    <Copyright>Copyright © Tangent Atlas. All rights reserved.</Copyright>
+    <!--
+      The target framework for everything that is not hosted by the compiler (the tool, samples, and tests).
+      The generator and modeling projects stay on netstandard2.0 regardless.  Change this in one place.
+    -->
+    <BellerophonTargetFramework>net10.0</BellerophonTargetFramework>
+    <!-- Report the naming rules in .editorconfig as build warnings, not only in the editor. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>

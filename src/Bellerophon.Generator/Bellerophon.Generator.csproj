@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The incremental source generator.  Targets netstandard2.0 because Visual Studio's compiler host requires it; the code it
+    generates can target any .NET version.  The modeling sources are compiled into this assembly rather than referenced,
+    so the compiler loads exactly one assembly and there are no dependency-loading problems inside Visual Studio.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Bellerophon.Generator</RootNamespace>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- Descriptors are created from the model diagnostic catalog; release tracking is not used yet. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 4.8 matches the compiler in the .NET 8 SDK and Visual Studio 2022 17.8, the oldest toolchain this project supports. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ships in the package's build folder, so NuGet imports it into every consuming project. -->
+    <None Include="build\Bellerophon.Generator.props" Pack="true" PackagePath="build" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Bellerophon.Modeling\**\*.cs" Exclude="..\Bellerophon.Modeling\bin\**;..\Bellerophon.Modeling\obj\**" LinkBase="Modeling" />
+  </ItemGroup>
+
+</Project>
