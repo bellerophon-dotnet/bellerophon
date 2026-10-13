@@ -14,6 +14,23 @@
     <NoWarn>$(NoWarn);RS2008</NoWarn>
   </PropertyGroup>
 
+  <!--
+    The package a project adds to use Bellerophon.  The generator ships as an analyzer (analyzers/dotnet/cs), not as a
+    library, and the props ship as build/Bellerophon.props: NuGet imports only build/<package ID>.props.  It is a
+    development dependency, so it never flows on to the consuming project's own consumers.
+  -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Bellerophon</PackageId>
+    <Description>Model-driven code generation for .NET: a Roslyn incremental source generator that turns one JSON model (bellerophon.json) into a multi-tenant, in-memory ledger with transactions, constraints, an ASP.NET Core API, write-behind persistence, a change feed, and rules-engine facts. Reference Bellerophon.Runtime alongside it, and Bellerophon.SqlServer or Bellerophon.Rules for those features.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IncludeSymbols>false</IncludeSymbols>
+    <!-- NU5128: an analyzer-only package has no lib folder, by design. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- 4.8 matches the compiler in the .NET 8 SDK and Visual Studio 2022 17.8, the oldest toolchain this project supports. -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
@@ -22,7 +39,8 @@
 
   <ItemGroup>
     <!-- Ships in the package's build folder, so NuGet imports it into every consuming project. -->
-    <None Include="build\Bellerophon.Generator.props" Pack="true" PackagePath="build" />
+    <None Include="build\Bellerophon.Generator.props" Pack="true" PackagePath="build\Bellerophon.props" />
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

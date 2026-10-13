@@ -1,0 +1,55 @@
+# Publishes the packages to nuget.org when a version tag is pushed:
+#
+#   git tag v0.4.0
+#   git push origin v0.4.0
+#
+# The tag is the version (v0.4.0 publishes 0.4.0; v0.5.0-preview.1 publishes a prerelease).  No API key is stored:
+# nuget.org's trusted publishing exchanges this workflow's GitHub token for a key that lasts one hour.  It needs a
+# trusted publishing policy on nuget.org (owner bellerophon-dotnet, repository bellerophon, workflow release.yml) and
+# the repository secret NUGET_USER, the nuget.org profile name that owns the packages.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # lets the job ask GitHub for the token nuget.org trusts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version from the tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: dotnet build Bellerophon.sln --configuration Release -p:Version=$VERSION
+
+      - name: Test
+        run: dotnet test --solution Bellerophon.sln --configuration Release --no-build
+
+      - name: Pack
+        run: |
+          for project in Bellerophon.Generator Bellerophon.Runtime Bellerophon.SqlServer Bellerophon.Rules Bellerophon.Rules.NRules Bellerophon.Tool; do
+            dotnet pack "src/$project" --configuration Release --no-build --output artifacts -p:Version=$VERSION
+          done
+
+      - name: Sign in to nuget.org
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # Pushes each .nupkg and its .snupkg (symbols).  --skip-duplicate makes re-running a release harmless.
+      - name: Publish
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

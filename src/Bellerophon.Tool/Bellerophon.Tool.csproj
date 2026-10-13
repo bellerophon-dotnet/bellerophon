@@ -11,6 +11,8 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>bell</ToolCommandName>
     <PackageId>Bellerophon.Tool</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>The bell command for Bellerophon models: bell validate &lt;path to bellerophon.json&gt; reports every model error with its line and column. Install with: dotnet tool install --global Bellerophon.Tool</Description>
   </PropertyGroup>
 
   <ItemGroup>

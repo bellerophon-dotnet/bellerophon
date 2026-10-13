@@ -9,6 +9,8 @@
   <PropertyGroup>
     <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
     <RootNamespace>Bellerophon.Rules</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>The rules engine host for Bellerophon models: one session per tenant, fed by the tenant's change feed and latest values, evaluated in cycles, with each cycle's decisions committed in one transaction. Referencing it makes the generator emit the model's rules adapters. Connect an engine with Bellerophon.Rules.NRules.</Description>
   </PropertyGroup>
 
 </Project>

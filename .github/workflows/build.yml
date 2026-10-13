@@ -1,0 +1,27 @@
+# Builds and tests every push to main and every pull request.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build Bellerophon.sln --configuration Release
+
+      # The SQL Server tests skip here: they need LocalDB (Windows) or a server named by BELLEROPHON_SQL_SERVER.
+      - name: Test
+        run: dotnet test --solution Bellerophon.sln --configuration Release --no-build

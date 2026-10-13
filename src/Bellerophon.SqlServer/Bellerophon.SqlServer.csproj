@@ -8,10 +8,18 @@
   <PropertyGroup>
     <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
     <RootNamespace>Bellerophon.SqlServer</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>SQL Server persistence for Bellerophon models: referencing it makes the generator emit the model's bulk writer (table-valued parameters, one round trip per cut) and its loader for recovery at startup. Includes Microsoft Entra authentication for Azure SQL.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <!--
+      From SqlClient 7, Microsoft Entra authentication (Authentication=Active Directory Default, Managed Identity, and the
+      rest) is a separate package; without it those connection strings fail with no authentication provider.  Referencing
+      it is enough: it registers itself.
+    -->
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.1" />
   </ItemGroup>
 
 </Project>

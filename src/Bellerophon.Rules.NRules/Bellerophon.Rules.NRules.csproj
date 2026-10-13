@@ -7,6 +7,8 @@
   <PropertyGroup>
     <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
     <RootNamespace>Bellerophon.Rules.NRules</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>Connects NRules to Bellerophon's rules host: one NRules session per tenant, compiled once from your rule repository.</Description>
   </PropertyGroup>
 
   <ItemGroup>

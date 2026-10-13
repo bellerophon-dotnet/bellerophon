@@ -11,8 +11,10 @@ obj/
 TestResults/
 test-results.txt
 
-# Offline package downloads: restored from NuGet, never committed
-packages/
-persistence/
+# Offline package downloads at the repository root: restored from NuGet, never committed.  Anchored with a leading
+# slash: unanchored, 'persistence/' also matched samples/AtlasLedger.Server/Persistence (git ignores case on Windows),
+# and that folder was never committed.
+/packages/
+/persistence/
 *.nupkg
 *.zip

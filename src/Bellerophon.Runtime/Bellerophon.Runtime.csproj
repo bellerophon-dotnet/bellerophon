@@ -7,6 +7,8 @@
   <PropertyGroup>
     <TargetFramework>$(BellerophonTargetFramework)</TargetFramework>
     <RootNamespace>Bellerophon.Runtime</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>The fixed server code Bellerophon's generated code calls: OAuth scope and identity claim checks, tenant membership authorization, the model contract (version and fingerprint, 426 on mismatch), the batch endpoint's request types, and service registration.</Description>
   </PropertyGroup>
 
   <ItemGroup>
