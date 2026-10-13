@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.10.12224.181 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
@@ -36,6 +36,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtlasLedger.Schema", "samples\AtlasLedger.Schema\AtlasLedger.Schema.csproj", "{30E59960-5C00-4863-BF53-3BDB9A97EFEF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtlasLedger.Persistence.Tests", "tests\AtlasLedger.Persistence.Tests\AtlasLedger.Persistence.Tests.csproj", "{6D6FBE76-54B8-4137-8914-8F1117C8555D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{770EB924-8FA8-4B98-9571-6A7A34684E07}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\build.yml = .github\workflows\build.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -234,5 +240,8 @@ Global
 		{1DD6B220-0332-4A09-BC4C-9FC39FD223C5} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{30E59960-5C00-4863-BF53-3BDB9A97EFEF} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{6D6FBE76-54B8-4137-8914-8F1117C8555D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1E8B126D-949F-47E3-BF9C-B9D86B65E0BB}
 	EndGlobalSection
 EndGlobal
