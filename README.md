@@ -4,7 +4,7 @@ Model-driven code generation for .NET. Bellerophon could not defeat the Chimera 
 
 You declare a data model in one JSON file; a Roslyn incremental source generator turns it into C# during every build, in the IDE and on the command line alike. The same model generates both sides of the system: the server (rows, stores, controllers, access policies) and the client (the rows a client may hold).
 
-Design documents: [docs/tangent-atlas-architecture.md](docs/tangent-atlas-architecture.md) (the architecture, why each decision was made, and the roadmap) and [docs/generator-requirements.md](docs/generator-requirements.md) (every generator requirement with its status). This README documents what is built.
+Design documents: [docs/generator-requirements.md](docs/generator-requirements.md) (every generator requirement with its status). This README documents what is built. The architecture of Tangent Atlas, the product built on Bellerophon, and its roadmap are kept with the product, in the `TangentAtlas.Platform` repository (`Documents/`), not here.
 
 ## Layout
 
@@ -54,7 +54,7 @@ dotnet run --project src/Bellerophon.Tool -- validate samples/AtlasLedger.Server
 
 The samples' project files contain exactly what a consumer writes. The one exception is the `Import` line, which stands in for the NuGet package reference; the package imports `build/Bellerophon.Generator.props` automatically.
 
-There are two roles. **Primary** is the authoritative copy, on the server: rows, partitions, transactions, persistence hooks, stores, controllers, and policies. **Replica** is a synchronized copy of the synced tables, for clients. The server owns the model: its `bellerophon.json` sits in the project folder and is included automatically.
+There are two roles for application code. **Primary** is the authoritative copy, on the server: rows, partitions, transactions, persistence hooks, stores, controllers, and policies. **Replica** is a synchronized copy of the synced tables, for clients. A third role, **Schema**, generates only the database's Entity Framework model for migrations (see [SQL Server](#sql-server)). The server owns the model: its `bellerophon.json` sits in the project folder and is included automatically.
 
 ```xml
 <PropertyGroup>
@@ -81,7 +81,7 @@ The two samples are the seeds of the product's server and client, and keep the p
 
 **The server** (`samples/AtlasLedger.Server`) listens on `http://127.0.0.1:5180` (`appsettings.json`, overridable on the command line, for example `--urls`) and runs until stopped. `AtlasLedgerServer.Build` assembles it, so tests can host the same server:
 
-- `Persistence/`: `LedgerFlusher` writes each tenant's cuts to an `ILedgerDatabase`, retrying with backoff and stopping the tenant if writes keep failing. `InMemoryLedgerDatabase` stands in for SQL Server until the generated writer and loader exist; nothing survives a restart yet.
+- `Persistence/`: `LedgerFlusher` writes each tenant's cuts to an `ILedgerDatabase`, retrying with backoff and stopping the tenant if writes keep failing. `SqlServerLedgerDatabase` wraps the generated SQL Server writer and loader and is used when `ConnectionStrings:Ledger` is set; `InMemoryLedgerDatabase` is used otherwise, for development and tests, and nothing in it survives a restart. `LedgerRecovery` loads every tenant before anything else starts (see [SQL Server](#sql-server)).
 - `Compliance/`: the NRules rules (`ComplianceRules.cs`) and `ComplianceService`, which starts an engine per tenant, logs decisions, and trims each tenant's change journal to what its engine still needs.
 - `Market/`: `SimulatedMarketFeed` prices every held symbol with a random walk and sends an occasional bad print (a zero price, corrected on the next tick). A real feed replaces this class only.
 - `Security/`: `DevelopmentAuthentication` signs callers in from a `Development-Caller` header (`tool` or `advisor`) with the claims the identity provider issues. The server refuses to start outside the Development environment until bearer tokens are wired in.
