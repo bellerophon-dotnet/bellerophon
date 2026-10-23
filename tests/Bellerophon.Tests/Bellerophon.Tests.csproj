@@ -19,7 +19,7 @@
       xunit.runner.visualstudio (VSTest).  global.json at the repository root opts dotnet test into the platform.
     -->
     <PackageReference Include="xunit.v3" Version="4.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
     <!--
       The tests compile the generated code in memory, so they need a compiler at least as new as the C# the generated code
       targets (C# 13 or later; .NET 10 ships Roslyn 5.0).  The generator itself stays on 4.8.0 so older hosts can load it.
