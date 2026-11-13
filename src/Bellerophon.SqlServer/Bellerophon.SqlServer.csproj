@@ -19,7 +19,7 @@
       rest) is a separate package; without it those connection strings fail with no authentication provider.  Referencing
       it is enough: it registers itself.
     -->
-    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.2" />
   </ItemGroup>
 
 </Project>
