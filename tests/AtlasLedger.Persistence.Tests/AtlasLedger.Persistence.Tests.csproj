@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <!-- See Bellerophon.Tests: xunit.v3 on Microsoft Testing Platform v2, opted into by global.json. -->
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>
