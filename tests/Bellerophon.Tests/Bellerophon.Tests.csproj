@@ -18,7 +18,7 @@
       xunit.v3 runs on Microsoft Testing Platform v2, so the project needs neither Microsoft.NET.Test.Sdk nor
       xunit.runner.visualstudio (VSTest).  global.json at the repository root opts dotnet test into the platform.
     -->
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <!--
       The tests compile the generated code in memory, so they need a compiler at least as new as the C# the generated code
