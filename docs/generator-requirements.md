@@ -10,7 +10,7 @@ Most of v4 is now built. **The solution's README is the detailed reference for w
 
 Status labels: **Built** (implemented and tested), **Changed** (built differently from v4; the reason is in Part I), **Planned** (specified, not built), **Dropped** (no longer wanted).
 
-**Where it stands.** Generator version 0.5.0, on .NET 10. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
+**Where it stands.** Generator version 0.7.0, on .NET 11. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
 
 ---
 
@@ -24,14 +24,14 @@ Status labels: **Built** (implemented and tested), **Changed** (built differentl
 |---|---|---|---|
 | `Bellerophon.Modeling` | `netstandard2.0` | Built | Parser, semantic model, validation, model writer, fingerprint, navigation naming. No dependencies. |
 | `Bellerophon.Generator` | `netstandard2.0` | Built | The incremental generator and its emitters; compiles the modeling sources into itself. Ships `build/Bellerophon.Generator.props`. |
-| `Bellerophon.Runtime` | `net10.0` | Built | Fixed server code referenced by generated code (Part G). |
-| `Bellerophon.Rules` | `net10.0` | Built | The rules engine host: one session per tenant, in cycles. No dependencies. Referencing it makes the generator emit the rules adapters. |
-| `Bellerophon.Rules.NRules` | `net10.0` | Built | Connects NRules sessions to the host. |
-| `Bellerophon.SqlServer` | `net10.0` | Built | The SQL Server runtime (Microsoft.Data.SqlClient): schema check, table types, table-valued parameters. Referencing it makes the generator emit the model's SQL writer and loader (D7, D8). |
-| `Bellerophon.Tool` | `net10.0` | Built (validation) | The `bell` command: `bell validate`; later baseline promotion, migration scripts, model-diff reports, metrics. |
+| `Bellerophon.Runtime` | `net11.0` | Built | Fixed server code referenced by generated code (Part G). |
+| `Bellerophon.Rules` | `net11.0` | Built | The rules engine host: one session per tenant, in cycles. No dependencies. Referencing it makes the generator emit the rules adapters. |
+| `Bellerophon.Rules.NRules` | `net11.0` | Built | Connects NRules sessions to the host. |
+| `Bellerophon.SqlServer` | `net11.0` | Built | The SQL Server runtime (Microsoft.Data.SqlClient): schema check, table types, table-valued parameters. Referencing it makes the generator emit the model's SQL writer and loader (D7, D8). |
+| `Bellerophon.Tool` | `net11.0` | Built (validation) | The `bell` command: `bell validate`; later baseline promotion, migration scripts, model-diff reports, metrics. |
 | `Bellerophon.Analyzers` | `netstandard2.0` | Planned | Analyzers for hand-written code (Part F). |
 
-Only the compiler-hosted projects target `netstandard2.0`; everything else follows `BellerophonTargetFramework` in `Directory.Build.props`. No framework earlier than .NET 10 is supported. Enums and custom types are hand-written C# in a small shared library referenced by both roles.
+Only the compiler-hosted projects target `netstandard2.0`; everything else follows `BellerophonTargetFramework` in `Directory.Build.props`. No framework earlier than .NET 11 is supported, and the generator needs the .NET 11 SDK (it is built against the compiler that SDK ships, Roslyn 5.12). Enums and custom types are hand-written C# in a small shared library referenced by both roles.
 
 **A3. Roles — Changed.** **Primary** (server) and **Replica** (client), formerly Master and Slave, selected by the `BellerophonRole` build property. A third role, **Schema**, generates only the Entity Framework model of the database for its migrations (D13). **The server project owns the model file;** a client includes the same file with one line, so the two can never generate from different copies:
 
