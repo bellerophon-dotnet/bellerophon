@@ -71,6 +71,11 @@ namespace Bellerophon.Generator.Emitters
                         writer.Summary($"Deletes a {table.Name}, honoring each child relation's delete rule.");
                         writer.Line("/// <returns>False if the tenant has no row with that key.</returns>");
                         writer.Line($"public bool Delete{table.Name}({shape.KeyParameters(table)}{(durable ? ", long rowVersion" : string.Empty)}) => this.Open().Delete{table.Name}Core({shape.KeyParameterNames(table)}{(durable ? ", rowVersion" : string.Empty)});");
+                        writer.Line();
+                        writer.Summary($"Makes the {table.Plural} exactly the given rows: inserts the missing, updates those whose values differ, deletes the rest (honoring delete rules), and leaves the unchanged alone, so they keep their versions and nothing about them reaches the change feed. For tables the server derives, such as a rules engine's results.");
+                        writer.Line("/// <param name=\"rows\">Every row the table should hold, each a new row object (not one already stored).</param>");
+                        writer.Line("/// <returns>The number of rows inserted, updated, or deleted.</returns>");
+                        writer.Line($"public int Replace{table.Plural}(global::System.Collections.Generic.IEnumerable<{row}> rows) => this.Open().Replace{table.Plural}Core(rows);");
                     }
                 }
                 else

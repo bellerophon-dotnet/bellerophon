@@ -78,8 +78,19 @@ namespace Bellerophon.Generator.Emitters
                 }
             }
 
+            var synced = SyncEmitter.SyncedTables(shape).Count > 0;
+            if (synced)
+            {
+                files.Add(new GeneratedFile($"{prefix}.{name}Sync.g.cs", SyncEmitter.EmitTypes(shape)));
+            }
+
             if (!role.IsPrimary)
             {
+                if (synced)
+                {
+                    files.Add(new GeneratedFile($"{prefix}.{name}SyncClient.g.cs", SyncEmitter.EmitClient(shape)));
+                }
+
                 return files;
             }
 
@@ -94,6 +105,10 @@ namespace Bellerophon.Generator.Emitters
             if (access.Policies.Count > 0)
             {
                 files.Add(new GeneratedFile($"{prefix}.{name}AccessPolicies.g.cs", AccessEmitter.Emit(access)));
+                if (synced)
+                {
+                    files.Add(new GeneratedFile($"{prefix}.{name}ChangesController.g.cs", SyncEmitter.EmitController(shape)));
+                }
             }
 
             foreach (var server in Planner.Server(resolved, role))

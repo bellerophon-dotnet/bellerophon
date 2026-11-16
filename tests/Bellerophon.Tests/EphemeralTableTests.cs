@@ -143,6 +143,32 @@ namespace Bellerophon.Tests
         }
 
         /// <summary>
+        /// Replacing a derived table touches only what differs: unchanged rows keep their versions and stay out of the
+        /// change feed; changed rows are updated, new ones inserted, and rows no longer derived deleted.
+        /// </summary>
+        [Fact]
+        public void ReplacingADerivedTableTouchesOnlyWhatDiffers()
+        {
+            var partition = NewPartition(usesWriteBehind: false);
+            var accountId = Guid.NewGuid();
+            partition.InsertAccount(Make("Account", ("AccountId", accountId), ("Name", "Joe 10")));
+            Assert.Equal(2, Replace(partition, (accountId, "AAPL", 10m), (accountId, "MSFT", 5m)));
+            var apple = (long)partition.FindPosition(accountId, "AAPL").RowVersion;
+            var before = (long)partition.CommittedSequence;
+
+            Assert.Equal(0, Replace(partition, (accountId, "AAPL", 10m), (accountId, "MSFT", 5m)));
+            Assert.Equal(before, (long)partition.CommittedSequence);
+
+            Assert.Equal(3, Replace(partition, (accountId, "AAPL", 10m), (accountId, "MSFT", 6m), (accountId, "NVDA", 1m)) + Replace(partition, (accountId, "MSFT", 6m), (accountId, "NVDA", 1m)));
+            Assert.Null(partition.FindPosition(accountId, "AAPL"));
+            Assert.Equal(6m, (decimal)partition.FindPosition(accountId, "MSFT").Quantity);
+            var changes = partition.ReadChangesSince(before);
+            Assert.Equal(2, ((System.Collections.ICollection)changes.ChangedPositions).Count);
+            Assert.Single((System.Collections.IEnumerable)changes.DeletedPositions);
+            Assert.True(apple <= before);
+        }
+
+        /// <summary>
         /// Every partition has its own epoch, so a reader can tell a restarted server (whose ephemeral rows were rebuilt
         /// with new sequences) from the one it was following.
         /// </summary>
@@ -173,6 +199,10 @@ namespace Bellerophon.Tests
             Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == Bellerophon.Modeling.Diagnostics.DiagnosticIds.DurableReferencesEphemeral);
         }
 
+        // A transaction is a ref struct, so the replacement runs in C# compiled with the model.
+        private static int Replace(dynamic partition, params (Guid AccountId, string Symbol, decimal Quantity)[] positions) =>
+            (int)Holdings.Value.GetType("Scenarios.Derived")!.GetMethod("Replace")!.Invoke(null, new object[] { partition, positions })!;
+
         private static System.Collections.Generic.Dictionary<string, string> Sources(string role)
         {
             var run = GeneratorTests.Run(Model, role, includeEnums: false);
@@ -198,14 +228,24 @@ namespace Bellerophon.Tests
             return row;
         }
 
-        private static Assembly Compile()
-        {
-            var run = GeneratorTests.Run(Model, "Primary", includeEnums: false);
-            Assert.Empty(run.Result.Diagnostics);
-            using var stream = new MemoryStream();
-            var result = run.Output.Emit(stream);
-            Assert.True(result.Success, string.Join("\n", result.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)));
-            return Assembly.Load(stream.ToArray());
-        }
+        private static Assembly Compile() => TransactionTests.Compile(Model, "Primary", """
+            namespace Scenarios
+            {
+                using System;
+                using System.Linq;
+                using Test.Holdings.Primary;
+
+                public static class Derived
+                {
+                    public static int Replace(HoldingsPartition partition, (Guid AccountId, string Symbol, decimal Quantity)[] positions)
+                    {
+                        using var transaction = partition.BeginTransaction();
+                        var changed = transaction.ReplacePositions(positions.Select(item => new Position { AccountId = item.AccountId, Symbol = item.Symbol, Quantity = item.Quantity }));
+                        transaction.Commit();
+                        return changed;
+                    }
+                }
+            }
+            """, includeEnums: false);
     }
 }

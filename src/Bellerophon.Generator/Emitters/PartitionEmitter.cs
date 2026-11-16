@@ -429,6 +429,7 @@ namespace Bellerophon.Generator.Emitters
                 {
                     EmitUpdate(shape, table, writer);
                     EmitDelete(shape, table, writer);
+                    EmitReplace(shape, table, writer);
                 }
             }
             else
@@ -680,6 +681,68 @@ namespace Bellerophon.Generator.Emitters
 
             writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Updated, row, before, {(shape.IsPrimary && ModelShape.IsModeled(table) ? "row.RowVersion" : "0")}));");
             writer.Line("return row;");
+            writer.Close();
+        }
+
+        /// <summary>
+        /// Emits Replace{Plural}Core: makes the table exactly the given rows, touching only what differs, so unchanged rows
+        /// keep their versions and nothing about them reaches the change feed.  For tables the server derives.
+        /// </summary>
+        private static void EmitReplace(ModelShape shape, TableModel table, CodeWriter writer)
+        {
+            var row = shape.RowType(table);
+            var field = shape.TableField(table);
+            var keyType = shape.KeyType(table);
+            var keyArguments = string.Join(", ", table.Key.Select(column => $"stale.{Names.Identifier(column)}"));
+            writer.Line();
+            writer.Line($"internal int Replace{table.Plural}Core(global::System.Collections.Generic.IEnumerable<{row}> rows)");
+            writer.Open();
+            writer.Line("this.RequireTransaction();");
+            writer.Line("global::System.ArgumentNullException.ThrowIfNull(rows);");
+            writer.Line($"var wanted = new global::System.Collections.Generic.HashSet<{keyType}>();");
+            writer.Line("var changed = 0;");
+            writer.Line("foreach (var incoming in rows)");
+            writer.Open();
+            writer.Line($"var key = {shape.KeyValue(table, "incoming")};");
+            writer.Line("if (!wanted.Add(key))");
+            writer.Open();
+            writer.Line($"throw new {Constraint}($\"{table.Name} {{key}} appears twice in the replacement.\");");
+            writer.Close();
+            writer.Line();
+            writer.Line($"if (this.{field}.TryGetValue(key, out var existing))");
+            writer.Open();
+            writer.Line("if (existing.HasSameValues(incoming))");
+            writer.Open();
+            writer.Line("continue;");
+            writer.Close();
+            writer.Line();
+            writer.Line("incoming.RowVersion = existing.RowVersion;");
+            writer.Line($"this.Update{table.Name}Core(incoming);");
+            writer.Close();
+            writer.Line("else");
+            writer.Open();
+            writer.Line($"this.Insert{table.Name}Core(incoming);");
+            writer.Close();
+            writer.Line();
+            writer.Line("changed++;");
+            writer.Close();
+            writer.Line();
+            writer.Line($"var stales = new global::System.Collections.Generic.List<{row}>();");
+            writer.Line($"foreach (var pair in this.{field})");
+            writer.Open();
+            writer.Line("if (!wanted.Contains(pair.Key))");
+            writer.Open();
+            writer.Line("stales.Add(pair.Value);");
+            writer.Close();
+            writer.Close();
+            writer.Line();
+            writer.Line("foreach (var stale in stales)");
+            writer.Open();
+            writer.Line($"this.Delete{table.Name}Core({keyArguments}, stale.RowVersion);");
+            writer.Line("changed++;");
+            writer.Close();
+            writer.Line();
+            writer.Line("return changed;");
             writer.Close();
         }
 
