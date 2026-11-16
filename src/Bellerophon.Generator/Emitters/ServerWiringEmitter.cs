@@ -91,7 +91,7 @@ namespace Bellerophon.Generator.Emitters
             writer.Line($"global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<{shape.RootType}>(services);");
             writer.Line($"{extensions}.AddSingleton<global::Bellerophon.Runtime.ITenantMembership>(services, serviceProvider => {provider}.GetRequiredService<{shape.RootType}>(serviceProvider));");
             writer.Line($"{extensions}.AddSingleton<{store}>(services);");
-            foreach (var table in shape.Tables.Where(table => table.Persistence == Persistence.Durable))
+            foreach (var table in shape.Tables.Where(ModelShape.IsModeled))
             {
                 writer.Line($"{extensions}.AddSingleton<I{table.Name}Store>(services, serviceProvider => {provider}.GetRequiredService<{store}>(serviceProvider));");
             }

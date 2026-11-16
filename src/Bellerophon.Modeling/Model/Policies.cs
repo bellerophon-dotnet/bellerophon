@@ -34,6 +34,12 @@ namespace Bellerophon.Modeling.Model
         /// Insert only (order intents, fills, violations).
         /// </summary>
         AppendOnly,
+
+        /// <summary>
+        /// Written only by server code (a rules engine deriving it, for example), never through the API: its controller
+        /// serves reads only, and the batch endpoint refuses it.
+        /// </summary>
+        ServerOnly,
     }
 
     /// <summary>

@@ -197,6 +197,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"changed{table.Plural}.Sort(static (left, right) => left.RowVersion.CompareTo(right.RowVersion));");
             }
 
+            writer.Line("this.cutInFlight = true;");
             writer.Line("this.dirtyRows.Clear();");
             // The cut's constructor takes its lists in dependency order, the order a writer applies them.
             var cutOrder = shape.TablesInDependencyOrder().Where(ModelShape.IsDurable);
@@ -209,6 +210,20 @@ namespace Bellerophon.Generator.Emitters
             writer.Summary("Marks a cut durable: advances the watermark and releases every writer waiting on it. Used by the flusher after its database transaction commits.");
             writer.Line("/// <param name=\"sequence\">The cut's sequence.</param>");
             writer.Line("public void MarkDurable(long sequence)");
+            writer.Open();
+            writer.Line("// Commits after the cut that changed only ephemeral rows have nothing to save: with nothing waiting, they are");
+            writer.Line("// durable with it.");
+            writer.Line("long through;");
+            writer.Line("lock (this.syncRoot)");
+            writer.Open();
+            writer.Line("this.cutInFlight = false;");
+            writer.Line("through = this.dirtyRows.Count == 0 ? global::System.Math.Max(sequence, this.committedSequence) : sequence;");
+            writer.Close();
+            writer.Line();
+            writer.Line("this.AdvanceDurable(through);");
+            writer.Close();
+            writer.Line();
+            writer.Line("private void AdvanceDurable(long sequence)");
             writer.Open();
             writer.Line($"global::System.Collections.Generic.List<{Completion}>? released = null;");
             writer.Line("lock (this.durabilityGate)");
@@ -422,7 +437,7 @@ namespace Bellerophon.Generator.Emitters
         private static void EmitChangeFeed(ModelShape shape, CodeWriter writer)
         {
             var changes = $"{shape.Name}Changes";
-            var ordered = shape.TablesInDependencyOrder().Where(ModelShape.IsDurable).ToList();
+            var ordered = shape.TablesInDependencyOrder().Where(ModelShape.IsModeled).ToList();
 
             writer.Line();
             writer.Summary("Gets the journal's horizon: changes at or before this sequence may no longer be journaled, so a reader that has applied less must take a snapshot.");
@@ -724,7 +739,7 @@ namespace Bellerophon.Generator.Emitters
         /// <returns>The source text.</returns>
         public static string EmitChanges(ModelShape shape)
         {
-            var ordered = shape.TablesInDependencyOrder().Where(ModelShape.IsDurable).ToList();
+            var ordered = shape.TablesInDependencyOrder().Where(ModelShape.IsModeled).ToList();
             var changes = $"{shape.Name}Changes";
             var lists = "global::System.Collections.Generic.IReadOnlyList";
             var writer = new CodeWriter();

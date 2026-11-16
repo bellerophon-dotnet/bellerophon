@@ -24,14 +24,16 @@ namespace Bellerophon.Generator.Emitters
             var names = new List<string>();
             foreach (var table in resolved.Model.Tables)
             {
-                if (role.IsPrimary || (table.IsSynced && table.Persistence == Persistence.Durable))
+                if (role.IsPrimary || (table.IsSynced && ModelShape.IsModeled(table)))
                 {
                     names.Add(table.Name);
                 }
             }
 
-            var ordered = new ModelShape(resolved, role).TablesInDependencyOrder().Select(table => table.Name).ToList();
-            return new ModelInput(model.Namespace, model.Name, model.Version, ModelFingerprint.Compute(model, resolved.EnumMembers()), role.Name, new EquatableArray<string>(names), new EquatableArray<string>(ordered));
+            var shape = new ModelShape(resolved, role);
+            var ordered = shape.TablesInDependencyOrder().Select(table => table.Name).ToList();
+            var writable = shape.TablesInDependencyOrder().Where(ModelShape.IsApiWritable).Select(table => table.Name).ToList();
+            return new ModelInput(model.Namespace, model.Name, model.Version, ModelFingerprint.Compute(model, resolved.EnumMembers()), role.Name, new EquatableArray<string>(names), new EquatableArray<string>(ordered), new EquatableArray<string>(writable));
         }
 
         /// <summary>
@@ -47,7 +49,7 @@ namespace Bellerophon.Generator.Emitters
 
             foreach (var table in resolved.Model.Tables)
             {
-                if (table.Persistence != Persistence.Durable)
+                if (!ModelShape.IsModeled(table))
                 {
                     continue;
                 }
@@ -72,7 +74,8 @@ namespace Bellerophon.Generator.Emitters
                     new EquatableArray<KeyPart>(key),
                     table.Access.Read,
                     table.Access.Write,
-                    table.WriteMode == WriteMode.AppendOnly));
+                    table.WriteMode == WriteMode.AppendOnly,
+                    table.WriteMode == WriteMode.ServerOnly));
             }
 
             return inputs;
@@ -88,7 +91,7 @@ namespace Bellerophon.Generator.Emitters
             {
                 foreach (var table in resolved.Model.Tables)
                 {
-                    if (table.Persistence == Persistence.Durable)
+                    if (ModelShape.IsModeled(table))
                     {
                         policies.Add(new PolicyPlan(table.Name, table.Access.Read, table.Access.Write));
                     }

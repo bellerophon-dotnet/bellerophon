@@ -87,9 +87,9 @@ namespace Bellerophon.Generator.Emitters
                 EmitHasSameValues(shape, table, writer);
             }
 
-            if (!ModelShape.IsDurable(table))
+            if (!ModelShape.IsModeled(table))
             {
-                // Ephemeral tables never go over the wire, so they have no wire types to map to.
+                // Latest-value tables never go over the wire, so they have no wire types to map to.
             }
             else if (shape.IsPrimary)
             {

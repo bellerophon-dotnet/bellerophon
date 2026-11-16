@@ -1,4 +1,4 @@
-// <copyright file="GeneratorTests.cs" company="Tangent Atlas">
+﻿// <copyright file="GeneratorTests.cs" company="Tangent Atlas">
 //    Copyright © Tangent Atlas. All rights reserved.
 // </copyright>
 // <author>Donald Airey</author>
@@ -55,6 +55,8 @@ namespace Bellerophon.Tests
                 "Ledger.Primary.LedgerBatchController.g.cs",
                 "Ledger.Primary.LedgerCut.g.cs",
                 "Ledger.Primary.LedgerChanges.g.cs",
+                "Ledger.Primary.LedgerChangesController.g.cs",
+                "Ledger.Primary.LedgerSync.g.cs",
                 "Ledger.Primary.Price.g.cs",
             };
             foreach (var table in Tables)
@@ -121,7 +123,7 @@ namespace Bellerophon.Tests
             var master = Run(Fixture.Read("bellerophon.json"), "Primary", includeEnums: true);
             var run = Run(Fixture.Read("bellerophon.json"), "Replica", includeEnums: true);
 
-            var expected = new List<string> { "Ledger.g.cs", "Ledger.Replica.LedgerPartition.g.cs", "Ledger.Replica.LedgerTransaction.g.cs" };
+            var expected = new List<string> { "Ledger.g.cs", "Ledger.Replica.LedgerPartition.g.cs", "Ledger.Replica.LedgerTransaction.g.cs", "Ledger.Replica.LedgerSync.g.cs", "Ledger.Replica.LedgerSyncClient.g.cs" };
             foreach (var table in Tables.Where(table => table != "Dossier"))
             {
                 expected.Add($"Ledger.Replica.{table}.g.cs");

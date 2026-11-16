@@ -54,7 +54,9 @@ namespace Bellerophon.Generator.Emitters
             writer.Header();
             writer.Line($"namespace {input.Namespace}.Primary");
             writer.Open();
-            writer.Summary($"The API for the {input.Table} table. Reads require {string.Join(" or ", input.Read)}; writes require {string.Join(" or ", input.Write)}.");
+            writer.Summary(input.IsServerOnly
+                ? $"The API for the {input.Table} table, which the server writes and clients only read. Reads require {string.Join(" or ", input.Read)}."
+                : $"The API for the {input.Table} table. Reads require {string.Join(" or ", input.Read)}; writes require {string.Join(" or ", input.Write)}.");
             writer.Line($"[global::System.CodeDom.Compiler.GeneratedCode(\"Bellerophon\", \"{Names.Version}\")]");
             writer.Line($"[{Mvc}.ApiController]");
             writer.Line($"[{Authorization}.Authorize]");
@@ -94,6 +96,14 @@ namespace Bellerophon.Generator.Emitters
             writer.Line();
             writer.Line("return this.Ok(row);");
             writer.Close();
+
+            if (input.IsServerOnly)
+            {
+                // Written only by the server (derived by its rules, for example): the API reads it and never writes it.
+                writer.Close();
+                writer.Close();
+                return writer.ToString();
+            }
 
             writer.Line();
             writer.Summary("Inserts a row.");

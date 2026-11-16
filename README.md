@@ -100,7 +100,7 @@ AtlasLedger.Client mirror <tenant> --as advisor     # copy a tenant locally (Rep
 
 - `Api/LedgerApiClient` calls the API with the generated DTOs and contract headers, and turns refusals into `LedgerApiException` with the status code. It is hand-written until Bellerophon generates the typed client.
 - `Scripts/LedgerScript` is the JSON script format, the same as the batch endpoint's request: loading and exporting do nothing to the rows between the file and the ledger.
-- `Mirror/LedgerMirror` refreshes a local Replica of a tenant, table by table, parents first, until the sync endpoint exists.
+- `Mirror/LedgerMirror` refreshes a local Replica of a tenant, table by table, parents first. The generated sync client ([Client sync](#client-sync)) does the same with one request, and keeps the Replica current after it.
 - The walkthrough checks the status of every step it takes, so it doubles as a smoke test of a deployed server. Each run uses new tenants, so it can run against the same server repeatedly.
 
 ## The model format
@@ -136,13 +136,15 @@ AtlasLedger.Client mirror <tenant> --as advisor     # copy a tenant locally (Rep
 - **`plural`.** The plural of a table's name follows regular English rules (`Account` → `Accounts`, `Entity` → `Entities`, `Address` → `Addresses`). Declare irregular ones: `"plural": "People"`.
 - **`facts`.** `"facts": false` keeps a table out of the rules engine's working memory, saving memory per tenant for tables no rule reads. The built-in User table never enters it. Since only the server's engine sees facts, this property doesn't change the fingerprint.
 - **`sync`.** `"sync": false` keeps a table out of the client data set. A synced table may not reference an unsynced one, so every reference on the client resolves.
+- **`persistence`.** `"Durable"` (the default) or `"Ephemeral"`. An ephemeral table is a full member of the model that is never written to the database: it has transactions, references, unique constraints, row versions, the change feed, facts, a transfer object, a controller, and a place in the Replica, but it is not loaded at startup and has no Entity Framework schema, so after a restart it starts empty and is rebuilt (by the rules, typically). A durable table may not reference an ephemeral one, since the reference would dangle after a restart (BEL2008).
+- **`writeMode`.** `"Mutable"` (the default); `"AppendOnly"` (inserts only); or `"ServerOnly"`: written only by server code (the rules), never through the API. Its controller serves reads only and the batch endpoint refuses it, so what the server derives (positions, daily values, statistics) can be read and synced like any table without anyone else writing it. Exports leave it out: `Ledger.WritableTablesInDependencyOrder` lists the tables a client may write.
 - **Ordering.** Object properties are written in alphabetical order; arrays keep their written order (a key's order defines the index). The parser accepts any order and the model is canonicalized, so order never changes the generated code.
 - Comments (`//`, `/* */`) and trailing commas are allowed.
 
 ## Generated code
 
 **Both roles:**
-- **The root class** (`Ledger`): the in-memory database, holding one partition per tenant (`GetPartition`, `FindPartition`, `DiscardPartition`), `TablesInDependencyOrder`, plus `ModelName`, `Version`, `Fingerprint`, `Role`, and `Tables`.
+- **The root class** (`Ledger`): the in-memory database, holding one partition per tenant (`GetPartition`, `FindPartition`, `DiscardPartition`), `TablesInDependencyOrder`, `WritableTablesInDependencyOrder`, plus `ModelName`, `Version`, `Fingerprint`, `Role`, and `Tables`.
 - **The partition** (`LedgerPartition`): one dictionary per table keyed by its key, one per unique constraint, and the operations that keep keys, unique constraints, references, and navigation consistent. Every change is made in a transaction (below). The tenant's lock, `SyncRoot`, is a `System.Threading.Lock`: exclusive and reentrant. Hold it (`lock (partition.SyncRoot) { ... }`) to walk the graph consistently.
 - **The transaction** (`LedgerTransaction`): a unit of work in which every change commits together, or none does.
 - **Rows**, with navigation in both directions:
@@ -157,15 +159,17 @@ AtlasLedger.Client mirror <tenant> --as advisor     # copy a tenant locally (Rep
 - **The change feed** on each partition (`ReadChangesSince`, `TakeSnapshot`, `WaitForCommitAsync`) and its result, `LedgerChanges`, with `ToFacts()`.
 - **In a project that references `Bellerophon.Rules`:** `LedgerRulesTenant`, which feeds a tenant's engine, and `LedgerRuleActions`, where rules record their decisions.
 
-The replica role includes only synced tables, applies the server's data to its partition (`ApplyAccount`, `RemoveNode`; apply parents before children), and adds `Ledger.AddContractHeaders(headers)`.
+The replica role includes only synced tables, applies the server's data to its partition (`ApplyAccount`, `RemoveNode`; apply parents before children), and adds `Ledger.AddContractHeaders(headers)` and the sync client, `LedgerSyncClient` ([Client sync](#client-sync)).
 
 **Server role only:**
 - The transaction inserts, updates in place, and deletes (honoring each reference's delete rule: blocked while children exist, or cascading); updates and deletes name the version being replaced. A missing parent, a duplicate key or unique value, or a blocked delete throws `System.Data.ConstraintException`; a stale version throws `System.Data.DBConcurrencyException`.
 - **Append-only tables** (`"writeMode": "AppendOnly"`: order intents, fills, violations) get inserts only, with no update or delete anywhere: partition, store, or controller.
 - **Idempotent unique constraints** (`"idempotent": true`) make a duplicate insert return the row already stored instead of failing, so a retried order with the same client order id is never placed twice.
+- **Replacing a table's rows**: `Replace{Plural}(rows)` in a transaction makes a table hold exactly the rows given: missing rows are inserted, rows that differ are updated, rows no longer given are deleted, and unchanged rows are not touched, so they keep their version and nothing about them reaches the change feed or a client. It is how the rules materialize what they derive into ephemeral, server-only tables at the end of a cycle.
 - **Latest-value tables** (`"concurrency": "LatestValue"`, which requires `"persistence": "Ephemeral"`) are lock-free stores of immutable records for prices and other ticks: `PublishPrice` replaces the previous record in one atomic step and raises `PricePublished`, a standard `EventHandler<Price>` event; `FindPrice` and `Prices` never wait. They are looked up by key, so they can neither reference nor be referenced, and they are never persisted, synced, or exposed through the API.
 - For each table: an `I{Table}Store` interface and a `{Table}Controller` at `v{major}/tenants/{tenantId}/{table}`. A delete names the version being deleted: `DELETE .../{key}?rowVersion=7`. Constraint violations become 422 and stale versions 412.
 - `LedgerBatchController`, applying several operations as one transaction (above).
+- `LedgerChangesController` (`GET v{major}/tenants/{tenantId}/changes`), the sync endpoint ([Client sync](#client-sync)).
 - `LedgerStore`, implementing every store over the in-memory partitions; every write answers only once it's durable.
 - The persistence hooks on `LedgerPartition`, and `LedgerCut` (below).
 - `Ledger` implements `ITenantMembership` straight from each tenant's User table, so adding a user grants membership and removing one revokes it.
@@ -276,13 +280,39 @@ dotnet ef database update --project samples/AtlasLedger.Schema           # apply
 
 ## The change feed
 
-Each primary partition keeps a **journal** of committed changes, so readers can ask "what changed since sequence X?" The rules engine reads it now, and client sync will read it later.
+Each primary partition keeps a **journal** of committed changes, so readers can ask "what changed since sequence X?" The rules engine reads it, and so does client sync. Ephemeral tables are journaled like durable ones; latest-value tables are not.
 - **Commit order.** Every change gets a sequence, deletions included, and is journaled at commit, so a reader never sees an uncommitted or rolled-back change, and never sees changes out of order.
 - **Coalesced.** The journal keeps only a row's latest entry live, so it holds about one entry per changed row however often rows change. A read returns each changed row once, in its latest state, and each deleted key once. A key deleted and inserted again reads as changed.
 - **`ReadChangesSince(sequence, throughSequence)`** returns the changes after the reader's sequence. The optional limit, for example the durable watermark for client sync, leaves rows whose latest change is past it for the next read, so nothing is skipped.
 - **`TakeSnapshot()`** returns every row as of the last commit; a reader starts there, then reads changes since the snapshot's sequence. Nothing between the two can be lost.
 - **`WaitForCommitAsync(sequence)`** wakes a reader at the next commit past its sequence. Every waiter shares one completion per commit, so waiting costs nothing that accumulates.
-- **`TrimJournal(sequence)`** discards history no reader needs. A reader behind the horizon gets an incomplete read and starts again from a snapshot. Deleted rows stay in the journal until trimmed, so a host should trim periodically to the oldest sequence any reader still needs (for now, the rules engine's `AppliedSequence`).
+- **`TrimJournal(sequence)`** discards history no reader needs. A reader behind the horizon gets an incomplete read and starts again from a snapshot. Deleted rows stay in the journal until trimmed, so a host should trim periodically to the oldest sequence any reader still needs: the rules engine's `AppliedSequence`, but no further than what was committed a few minutes ago, so a sync client that is a moment behind gets changes rather than a snapshot.
+- **`Epoch`**, a `Guid` made when the partition is created or recovered. Ephemeral rows are rebuilt after a restart and take new sequences, which can repeat numbers a reader has already seen; a reader that keeps its sequence across a restart compares the epoch and starts from a snapshot when it differs.
+- **Durability of ephemeral-only commits.** A commit that changes only ephemeral rows gives the flusher nothing to write. It is durable at once when nothing earlier is waiting to be flushed; otherwise it becomes durable with the cut that covers the earlier changes.
+
+## Client sync
+
+A client keeps a **Replica** of the tables it needs, current to within a commit, through one generated endpoint and one generated client: no controller per screen, and no view model on the server. A view model is a query over the Replica.
+
+**The endpoint** (primary role): `GET v{major}/tenants/{tenantId}/changes?since={sequence}&epoch={epoch}&tables={A,B}&wait={seconds}`.
+- **Tables** are an inclusion list chosen by the client; omitted, every synced table. Each table needs its read scope (403 otherwise, and 404 for a tenant the caller isn't a member of), so access stays on the server, which knows nothing about views.
+- **A snapshot or the changes.** With `since=0`, an epoch other than the partition's, or a sequence behind the journal's horizon, the response is every row of the tables (`"reset": true`). Otherwise it is every row changed after `since`, in its latest state, and every row deleted (a client needs only its key), each once.
+- **Up to the durable watermark only**, so nothing a crash could undo leaves the server, and a snapshot waits until its sequence is durable.
+- **Long polling.** When nothing has changed, the request waits up to `wait` seconds (at most 60) for the next durable commit, then answers, possibly with nothing. The server holds no state per client; a client resumes exactly where it left off after any disconnect.
+- **The response**, `LedgerSyncResponse`: `{ "epoch", "through", "reset", "tables": { "position": { "rows": [...], "deleted": [...] } } }`. `through` is the client's next `since`.
+
+**The client** (replica role), `LedgerSyncClient`:
+
+```csharp
+var sync = new LedgerSyncClient(http, replica, tenantId, ["Position", "AccountStatistic"], AuthorizeAsync, json);
+sync.Synced += (_, change) => view.Refresh();   // outside the Replica's lock
+await sync.RunAsync(cancellationToken);           // a snapshot, then long polls, until cancelled
+```
+
+- It adds the parents of every table asked for (positions bring accounts and assets), so the Replica's references always resolve; `Tables` lists what it keeps, parents first.
+- Each response is applied in one Replica transaction (rows parents first, deletions children first; after a snapshot, rows the server no longer has are removed), so a view never shows half a commit. `Synced` names the tables that changed.
+- `authorize` signs each request in: a bearer token per request, so token expiry needs no special handling.
+- `SyncAsync(wait)` syncs once; `RunAsync` keeps syncing, retrying network failures with a growing pause. A refusal (401, 403, 404, or 426 when client and server are built from different models) ends it with `LedgerSyncException`.
 
 ## The compliance engine
 

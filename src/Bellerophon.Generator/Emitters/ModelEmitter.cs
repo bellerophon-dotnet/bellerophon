@@ -5,6 +5,7 @@
 namespace Bellerophon.Generator.Emitters
 {
     using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Emits the root class, named after the model (for example <c>Ledger</c>): the in-memory database, holding one
@@ -65,6 +66,9 @@ namespace Bellerophon.Generator.Emitters
             writer.Line();
             writer.Summary("The tables in dependency order, parents first. Write changed rows in this order and deleted rows in reverse, so foreign keys always hold.");
             writer.Line($"public static global::System.Collections.Generic.IReadOnlyList<string> TablesInDependencyOrder {{ get; }} = new string[] {{ {string.Join(", ", ordered)} }};");
+            writer.Line();
+            writer.Summary("The tables clients write, in dependency order: every table but those the server writes itself (server-only tables, such as what its rules derive) and latest-value stores. Export and import these.");
+            writer.Line($"public static global::System.Collections.Generic.IReadOnlyList<string> WritableTablesInDependencyOrder {{ get; }} = new string[] {{ {string.Join(", ", input.WritableTablesInDependencyOrder.Select(table => $"\"{table}\""))} }};");
             var partition = $"global::{input.Namespace}.{input.Role}.{input.Name}Partition";
             writer.Line();
             writer.Line($"private readonly global::System.Collections.Concurrent.ConcurrentDictionary<global::System.Guid, {partition}> partitions = new global::System.Collections.Concurrent.ConcurrentDictionary<global::System.Guid, {partition}>();");

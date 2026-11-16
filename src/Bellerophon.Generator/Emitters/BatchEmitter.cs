@@ -29,7 +29,7 @@ namespace Bellerophon.Generator.Emitters
         /// <returns>The source text.</returns>
         public static string Emit(ModelShape shape)
         {
-            var tables = shape.Tables.Where(ModelShape.IsDurable).ToList();
+            var tables = shape.Tables.Where(ModelShape.IsApiWritable).ToList();
             var controller = $"{shape.Name}BatchController";
             var policies = $"{shape.Name}AccessPolicies";
             var writer = new CodeWriter();

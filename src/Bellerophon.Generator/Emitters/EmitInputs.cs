@@ -130,7 +130,7 @@ namespace Bellerophon.Generator.Emitters
     /// <summary>
     /// The input for the generated root class, named after the model.
     /// </summary>
-    internal sealed record ModelInput(string Namespace, string Name, string Version, string Fingerprint, string Role, EquatableArray<string> Tables, EquatableArray<string> TablesInDependencyOrder);
+    internal sealed record ModelInput(string Namespace, string Name, string Version, string Fingerprint, string Role, EquatableArray<string> Tables, EquatableArray<string> TablesInDependencyOrder, EquatableArray<string> WritableTablesInDependencyOrder);
 
     /// <summary>
     /// One key column as it appears in routes and method signatures.
@@ -144,7 +144,7 @@ namespace Bellerophon.Generator.Emitters
     /// <summary>
     /// The input for one table's store interface and controller.
     /// </summary>
-    internal sealed record ApiInput(string Namespace, string Model, int MajorVersion, string Table, string Route, EquatableArray<KeyPart> Key, EquatableArray<string> Read, EquatableArray<string> Write, bool IsAppendOnly);
+    internal sealed record ApiInput(string Namespace, string Model, int MajorVersion, string Table, string Route, EquatableArray<KeyPart> Key, EquatableArray<string> Read, EquatableArray<string> Write, bool IsAppendOnly, bool IsServerOnly);
 
     /// <summary>
     /// The scopes behind one table's read and write policies.

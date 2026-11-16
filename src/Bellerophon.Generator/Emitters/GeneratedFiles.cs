@@ -72,14 +72,25 @@ namespace Bellerophon.Generator.Emitters
             foreach (var table in shape.Tables)
             {
                 files.Add(new GeneratedFile($"{prefix}.{table.Name}.g.cs", RowEmitter.Emit(shape, table)));
-                if (ModelShape.IsDurable(table))
+                if (ModelShape.IsModeled(table))
                 {
                     files.Add(new GeneratedFile($"{prefix}.{table.Name}Dto.g.cs", DtoEmitter.Emit(shape, table)));
                 }
             }
 
+            var synced = SyncEmitter.SyncedTables(shape).Count > 0;
+            if (synced)
+            {
+                files.Add(new GeneratedFile($"{prefix}.{name}Sync.g.cs", SyncEmitter.EmitTypes(shape)));
+            }
+
             if (!role.IsPrimary)
             {
+                if (synced)
+                {
+                    files.Add(new GeneratedFile($"{prefix}.{name}SyncClient.g.cs", SyncEmitter.EmitClient(shape)));
+                }
+
                 return files;
             }
 
@@ -94,6 +105,10 @@ namespace Bellerophon.Generator.Emitters
             if (access.Policies.Count > 0)
             {
                 files.Add(new GeneratedFile($"{prefix}.{name}AccessPolicies.g.cs", AccessEmitter.Emit(access)));
+                if (synced)
+                {
+                    files.Add(new GeneratedFile($"{prefix}.{name}ChangesController.g.cs", SyncEmitter.EmitController(shape)));
+                }
             }
 
             foreach (var server in Planner.Server(resolved, role))
@@ -102,7 +117,7 @@ namespace Bellerophon.Generator.Emitters
                 files.Add(new GeneratedFile($"{prefix}.{name}ApplicationBuilderExtensions.g.cs", ServerEmitter.EmitContract(server)));
             }
 
-            if (shape.Tables.Any(ModelShape.IsDurable))
+            if (shape.Tables.Any(ModelShape.IsModeled))
             {
                 files.Add(new GeneratedFile($"{prefix}.{name}Store.g.cs", StoreImplementationEmitter.Emit(shape)));
                 files.Add(new GeneratedFile($"{prefix}.{name}BatchController.g.cs", BatchEmitter.Emit(shape)));

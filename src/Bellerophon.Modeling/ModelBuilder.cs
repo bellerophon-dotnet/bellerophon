@@ -1,4 +1,4 @@
-// <copyright file="ModelBuilder.cs" company="Tangent Atlas">
+﻿// <copyright file="ModelBuilder.cs" company="Tangent Atlas">
 //    Copyright © Tangent Atlas. All rights reserved.
 // </copyright>
 // <author>Donald Airey</author>
@@ -942,8 +942,9 @@ namespace Bellerophon.Modeling
             }
 
             columns.Add(new ColumnModel(TenantColumn, string.Empty, GuidType, false, null, null, null, null, true, true, "The tenant that owns the row."));
-            if (draft.Persistence == Persistence.Durable)
+            if (draft.Concurrency != ConcurrencyMode.LatestValue)
             {
+                // Every transactional row has a version, saved or not: it orders the change feed and refuses stale updates.
                 columns.Add(new ColumnModel(RowVersionColumn, string.Empty, "System.Int64", false, null, null, null, null, false, true, "The sequence number of the row's last change."));
             }
 
