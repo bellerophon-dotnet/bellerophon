@@ -10,7 +10,7 @@ Most of v4 is now built. **The solution's README is the detailed reference for w
 
 Status labels: **Built** (implemented and tested), **Changed** (built differently from v4; the reason is in Part I), **Planned** (specified, not built), **Dropped** (no longer wanted).
 
-**Where it stands.** Generator version 0.6.1, on .NET 11. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
+**Where it stands.** Generator version 0.7.0, on .NET 11. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
 
 ---
 
