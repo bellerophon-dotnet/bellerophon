@@ -10,7 +10,7 @@
       The target framework for everything that is not hosted by the compiler (the tool, samples, and tests).
       The generator and modeling projects stay on netstandard2.0 regardless.  Change this in one place.
     -->
-    <BellerophonTargetFramework>net10.0</BellerophonTargetFramework>
+    <BellerophonTargetFramework>net11.0</BellerophonTargetFramework>
     <!-- Report the naming rules in .editorconfig as build warnings, not only in the editor. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
@@ -22,7 +22,7 @@
   -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.6.0</VersionPrefix>
     <VersionSuffix>dev</VersionSuffix>
     <Authors>Donald Airey</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

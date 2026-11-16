@@ -12,20 +12,20 @@ Design documents: [docs/generator-requirements.md](docs/generator-requirements.m
 |---|---|---|
 | `src/Bellerophon.Modeling` | netstandard2.0 | JSON parser with exact locations, semantic model, validation, model writer, fingerprint. No dependencies. |
 | `src/Bellerophon.Generator` | netstandard2.0 | The incremental source generator, plus `build/Bellerophon.Generator.props` for consuming projects. |
-| `src/Bellerophon.Runtime` | net10.0 | Fixed server code used by generated code: scope and identity checks, the tenant membership gate, the contract check. |
-| `src/Bellerophon.Rules` | net10.0 | The compliance engine's host: one rules session per tenant, evaluated in cycles. No dependencies; referencing it makes the generator emit the model's rules adapter. |
-| `src/Bellerophon.Rules.NRules` | net10.0 | Connects NRules: one NRules session per tenant from your compiled rules. |
-| `src/Bellerophon.SqlServer` | net10.0 | The SQL Server runtime (Microsoft.Data.SqlClient): schema check, table types, table-valued parameters. Referencing it makes the generator emit the model's `{Model}SqlDatabase`, the flusher's writer and the recovery loader. |
-| `src/Bellerophon.Tool` | net10.0 | The `bell` command: `bell validate <path to bellerophon.json>`. |
-| `samples/TangentAtlas` | net10.0 | Stands in for the hand-built TangentAtlas package that supplies the enums the model names. |
-| `samples/AtlasLedger.Server` | net10.0 | The seed of the product server (Primary role), and the owner of the model (`bellerophon.json`). Hosts the generated API on a fixed port until stopped, with write-behind persistence, the NRules compliance engine, and a simulated market feed. |
-| `samples/AtlasLedger.Schema` | net10.0 | The database schema (Schema role): an Entity Framework Core model generated from the server's model file, and its migrations. Used to create and evolve the database, never to read or write the ledger. |
-| `samples/AtlasLedger.Client` | net10.0 | The seed of the product client (Replica role), generated from the server's model file. Works with a running server through its API: tenants, JSON script load and export, alerts, a local copy of a tenant, and an end-to-end walkthrough. No ASP.NET Core. |
-| `tests/Bellerophon.Tests` | net10.0 | xUnit v3 tests, including generator tests driven by `CSharpGeneratorDriver`. |
-| `tests/AtlasLedger.Tests` | net10.0 | End-to-end tests: the real server and client in one process, over HTTP on a free port, including recovery at startup. |
-| `tests/AtlasLedger.Persistence.Tests` | net10.0 | Database tests against a real SQL Server (LocalDB on Windows, or `BELLEROPHON_SQL_SERVER`); each test creates, migrates, and drops its own database. Skipped, with the reason, when no server can be reached. |
+| `src/Bellerophon.Runtime` | net11.0 | Fixed server code used by generated code: scope and identity checks, the tenant membership gate, the contract check. |
+| `src/Bellerophon.Rules` | net11.0 | The compliance engine's host: one rules session per tenant, evaluated in cycles. No dependencies; referencing it makes the generator emit the model's rules adapter. |
+| `src/Bellerophon.Rules.NRules` | net11.0 | Connects NRules: one NRules session per tenant from your compiled rules. |
+| `src/Bellerophon.SqlServer` | net11.0 | The SQL Server runtime (Microsoft.Data.SqlClient): schema check, table types, table-valued parameters. Referencing it makes the generator emit the model's `{Model}SqlDatabase`, the flusher's writer and the recovery loader. |
+| `src/Bellerophon.Tool` | net11.0 | The `bell` command: `bell validate <path to bellerophon.json>`. |
+| `samples/TangentAtlas` | net11.0 | Stands in for the hand-built TangentAtlas package that supplies the enums the model names. |
+| `samples/AtlasLedger.Server` | net11.0 | The seed of the product server (Primary role), and the owner of the model (`bellerophon.json`). Hosts the generated API on a fixed port until stopped, with write-behind persistence, the NRules compliance engine, and a simulated market feed. |
+| `samples/AtlasLedger.Schema` | net11.0 | The database schema (Schema role): an Entity Framework Core model generated from the server's model file, and its migrations. Used to create and evolve the database, never to read or write the ledger. |
+| `samples/AtlasLedger.Client` | net11.0 | The seed of the product client (Replica role), generated from the server's model file. Works with a running server through its API: tenants, JSON script load and export, alerts, a local copy of a tenant, and an end-to-end walkthrough. No ASP.NET Core. |
+| `tests/Bellerophon.Tests` | net11.0 | xUnit v3 tests, including generator tests driven by `CSharpGeneratorDriver`. |
+| `tests/AtlasLedger.Tests` | net11.0 | End-to-end tests: the real server and client in one process, over HTTP on a free port, including recovery at startup. |
+| `tests/AtlasLedger.Persistence.Tests` | net11.0 | Database tests against a real SQL Server (LocalDB on Windows, or `BELLEROPHON_SQL_SERVER`); each test creates, migrates, and drops its own database. Skipped, with the reason, when no server can be reached. |
 
-Only the compiler-hosted projects are pinned to netstandard2.0, because the compiler that loads them requires it. Everything else, including every project that consumes the generated code, targets .NET 10 through `BellerophonTargetFramework` in `Directory.Build.props`; no earlier framework is supported.
+Only the compiler-hosted projects are pinned to netstandard2.0, because the compiler that loads them requires it. Everything else, including every project that consumes the generated code, targets .NET 11 through `BellerophonTargetFramework` in `Directory.Build.props`; no earlier framework is supported. The generator is built against the compiler the .NET 11 SDK ships (Roslyn 5.12), so a project that uses it needs that SDK or later.
 
 ## Developing
 
@@ -36,7 +36,7 @@ Only the compiler-hosted projects are pinned to netstandard2.0, because the comp
 
 ## Dependency notes
 
-- **Tests use xUnit v3 (4.0.1) on Microsoft Testing Platform v2.** The `xunit` package (v2) has been replaced by `xunit.v3`. The test project is an executable (`<OutputType>Exe</OutputType>`) and references only `xunit.v3`: no `Microsoft.NET.Test.Sdk`, no `xunit.runner.visualstudio`, since VSTest isn't used. `global.json` opts `dotnet test` into the platform; without it, the .NET 10 SDK refuses to run the tests. You can also run the test executable directly. Tests take the test's cancellation token from `TestContext.Current.CancellationToken` (analyzer rule xUnit1051). `ITestOutputHelper` is in the `Xunit` namespace, and `IAsyncLifetime` returns `ValueTask`.
+- **Tests use xUnit v3 (4.0.3) on Microsoft Testing Platform v2.** The `xunit` package (v2) has been replaced by `xunit.v3`. The test project is an executable (`<OutputType>Exe</OutputType>`) and references only `xunit.v3`: no `Microsoft.NET.Test.Sdk`, no `xunit.runner.visualstudio`, since VSTest isn't used. `global.json` opts `dotnet test` into the platform; without it, the .NET SDK refuses to run the tests. You can also run the test executable directly. Tests take the test's cancellation token from `TestContext.Current.CancellationToken` (analyzer rule xUnit1051). `ITestOutputHelper` is in the `Xunit` namespace, and `IAsyncLifetime` returns `ValueTask`.
 - **NRules 1.0.4.** `Bellerophon.Rules.NRules` references the `NRules` package, which brings in `NRules.Fluent`, `NRules.Runtime` and `NRules.RuleModel`. The adapter, the server sample's rules (`samples/AtlasLedger.Server/Compliance/ComplianceRules.cs`) and `NRulesTests` are built and run against 1.0.4. NRules identifies a fact by `Equals`, which is why generated facts are equal by key: a newer fact for a row updates the old one, and a retraction removes it whatever its values.
 - **xunit.v3 4.0.1** depends on `xunit.v3.mtp-v2` (Microsoft Testing Platform v2). Whether `xunit.runner.visualstudio` is still needed under v2 has not been verified.
 
@@ -73,7 +73,7 @@ A client generates from the server's file, with one standard line, so server and
 </ItemGroup>
 ```
 
-A project has exactly one model file; a second is a build error. The generated code requires C# 13 or later (the .NET 10 SDK's default); an older language version is the build error `BEL0003`, and nothing is generated. Model problems appear in the Error List as `BELnnnn` errors pointing at the exact line and column.
+A project has exactly one model file; a second is a build error. The generated code requires C# 13 or later (the .NET 11 SDK uses C# 15); an older language version is the build error `BEL0003`, and nothing is generated. Model problems appear in the Error List as `BELnnnn` errors pointing at the exact line and column.
 
 ## The server and client
 
