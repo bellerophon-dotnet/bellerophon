@@ -30,8 +30,10 @@ namespace Bellerophon.Generator.Emitters
                 }
             }
 
-            var ordered = new ModelShape(resolved, role).TablesInDependencyOrder().Select(table => table.Name).ToList();
-            return new ModelInput(model.Namespace, model.Name, model.Version, ModelFingerprint.Compute(model, resolved.EnumMembers()), role.Name, new EquatableArray<string>(names), new EquatableArray<string>(ordered));
+            var shape = new ModelShape(resolved, role);
+            var ordered = shape.TablesInDependencyOrder().Select(table => table.Name).ToList();
+            var writable = shape.TablesInDependencyOrder().Where(ModelShape.IsApiWritable).Select(table => table.Name).ToList();
+            return new ModelInput(model.Namespace, model.Name, model.Version, ModelFingerprint.Compute(model, resolved.EnumMembers()), role.Name, new EquatableArray<string>(names), new EquatableArray<string>(ordered), new EquatableArray<string>(writable));
         }
 
         /// <summary>

@@ -130,7 +130,7 @@ namespace Bellerophon.Generator.Emitters
     /// <summary>
     /// The input for the generated root class, named after the model.
     /// </summary>
-    internal sealed record ModelInput(string Namespace, string Name, string Version, string Fingerprint, string Role, EquatableArray<string> Tables, EquatableArray<string> TablesInDependencyOrder);
+    internal sealed record ModelInput(string Namespace, string Name, string Version, string Fingerprint, string Role, EquatableArray<string> Tables, EquatableArray<string> TablesInDependencyOrder, EquatableArray<string> WritableTablesInDependencyOrder);
 
     /// <summary>
     /// One key column as it appears in routes and method signatures.

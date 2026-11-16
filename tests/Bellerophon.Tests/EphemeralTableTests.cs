@@ -75,6 +75,9 @@ namespace Bellerophon.Tests
             Assert.DoesNotContain("PositionTable", primary["Holdings.Primary.HoldingsBatchController.g.cs"]);
             Assert.DoesNotContain("Position", primary["Holdings.Primary.HoldingsCut.g.cs"]);
             Assert.Contains("Holdings.Replica.Position.g.cs", replica.Keys);
+            Assert.Equal(
+                "public static global::System.Collections.Generic.IReadOnlyList<string> WritableTablesInDependencyOrder { get; } = new string[] { \"Account\", \"User\" };",
+                primary["Holdings.g.cs"].Split('\n').Select(line => line.Trim()).Single(line => line.Contains("WritableTablesInDependencyOrder {", StringComparison.Ordinal)));
             Assert.DoesNotContain("Holdings.Replica.Price.g.cs", replica.Keys);
         }
 
