@@ -16,7 +16,7 @@ namespace Bellerophon.Generator.Emitters
         /// <summary>
         /// The generator's version, stamped on generated types.
         /// </summary>
-        public const string Version = "0.6.0";
+        public const string Version = "0.6.1";
 
         /// <summary>
         /// The C# keywords for common CLR types, so generated code reads naturally.
