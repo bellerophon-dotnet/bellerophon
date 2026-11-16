@@ -376,7 +376,7 @@ namespace Bellerophon.Generator.Emitters
             writer.Open();
             writer.Line("private readonly global::System.Net.Http.HttpClient http;");
             writer.Line($"private readonly {shape.RootType} ledger;");
-            writer.Line("private readonly global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string?>> token;");
+            writer.Line("private readonly global::System.Func<global::System.Net.Http.HttpRequestMessage, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> authorize;");
             writer.Line("private readonly global::System.Text.Json.JsonSerializerOptions json;");
             writer.Line("private readonly global::System.Threading.SemaphoreSlim gate = new global::System.Threading.SemaphoreSlim(1, 1);");
             writer.Line();
@@ -385,13 +385,13 @@ namespace Bellerophon.Generator.Emitters
             writer.Line("/// <param name=\"ledger\">The Replica the tables are kept in.</param>");
             writer.Line("/// <param name=\"tenantId\">The tenant.</param>");
             writer.Line("/// <param name=\"tables\">The tables the view needs (parents are added); null for every table.</param>");
-            writer.Line("/// <param name=\"token\">Returns a bearer token for each request (null for none).</param>");
+            writer.Line("/// <param name=\"authorize\">Signs each request in: adds its bearer token, for example.</param>");
             writer.Line("/// <param name=\"json\">The server's JSON options (enums as names, for example); web defaults if null.</param>");
-            writer.Line($"public {client}(global::System.Net.Http.HttpClient http, {shape.RootType} ledger, global::System.Guid tenantId, global::System.Collections.Generic.IEnumerable<string>? tables, global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string?>> token, global::System.Text.Json.JsonSerializerOptions? json = null)");
+            writer.Line($"public {client}(global::System.Net.Http.HttpClient http, {shape.RootType} ledger, global::System.Guid tenantId, global::System.Collections.Generic.IEnumerable<string>? tables, global::System.Func<global::System.Net.Http.HttpRequestMessage, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> authorize, global::System.Text.Json.JsonSerializerOptions? json = null)");
             writer.Open();
             writer.Line("this.http = http ?? throw new global::System.ArgumentNullException(nameof(http));");
             writer.Line("this.ledger = ledger ?? throw new global::System.ArgumentNullException(nameof(ledger));");
-            writer.Line("this.token = token ?? throw new global::System.ArgumentNullException(nameof(token));");
+            writer.Line("this.authorize = authorize ?? throw new global::System.ArgumentNullException(nameof(authorize));");
             writer.Line("this.json = json ?? new global::System.Text.Json.JsonSerializerOptions(global::System.Text.Json.JsonSerializerDefaults.Web);");
             writer.Line("this.TenantId = tenantId;");
             writer.Line($"this.Tables = global::{shape.Namespace}.{name}SyncTables.Resolve(tables, out var unknown);");
@@ -433,10 +433,7 @@ namespace Bellerophon.Generator.Emitters
             writer.Line($"var path = $\"v{shape.Model.MajorVersion}/tenants/{{this.TenantId}}/changes?since={{this.Sequence}}&epoch={{this.Epoch}}&tables={{string.Join(',', this.Tables)}}&wait={{seconds}}\";");
             writer.Line("using var request = new global::System.Net.Http.HttpRequestMessage(global::System.Net.Http.HttpMethod.Get, path);");
             writer.Line($"{shape.RootType}.AddContractHeaders(request.Headers);");
-            writer.Line("if (await this.token(cancellationToken).ConfigureAwait(false) is { Length: > 0 } bearer)");
-            writer.Open();
-            writer.Line("request.Headers.Authorization = new global::System.Net.Http.Headers.AuthenticationHeaderValue(\"Bearer\", bearer);");
-            writer.Close();
+            writer.Line("await this.authorize(request, cancellationToken).ConfigureAwait(false);");
             writer.Line();
             writer.Line("using var answer = await this.http.SendAsync(request, cancellationToken).ConfigureAwait(false);");
             writer.Line("switch ((int)answer.StatusCode)");

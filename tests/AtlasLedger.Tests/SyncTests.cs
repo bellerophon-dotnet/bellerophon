@@ -53,9 +53,9 @@ namespace AtlasLedger.Tests
         {
             var cancellationToken = TestContext.Current.CancellationToken;
             var tenant = await this.NewTenantAsync();
-            using var http = this.Http();
+            using var http = new HttpClient { BaseAddress = this.server.HttpClient.BaseAddress };
             var ledger = new ReplicaLedger();
-            var sync = new LedgerSyncClient(http, ledger, tenant, null, _ => ValueTask.FromResult<string?>(null), Json);
+            var sync = new LedgerSyncClient(http, ledger, tenant, null, Development, Json);
             var synced = new List<LedgerSyncedEventArgs>();
             sync.Synced += (_, change) => synced.Add(change);
 
@@ -90,7 +90,7 @@ namespace AtlasLedger.Tests
             var cancellationToken = TestContext.Current.CancellationToken;
             var tenant = await this.NewTenantAsync();
             using var http = this.Http();
-            var sync = new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Symbol" }, _ => ValueTask.FromResult<string?>(null), Json);
+            var sync = new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Symbol" }, Development, Json);
             await sync.SyncAsync(TimeSpan.Zero, cancellationToken);
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -114,14 +114,14 @@ namespace AtlasLedger.Tests
             var cancellationToken = TestContext.Current.CancellationToken;
             var tenant = await this.NewTenantAsync();
             using var http = this.Http();
-            var sync = new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Symbol" }, _ => ValueTask.FromResult<string?>(null), Json);
+            var sync = new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Symbol" }, Development, Json);
 
             Assert.Equal(new[] { "Node", "Symbol" }, sync.Tables);
             await sync.SyncAsync(TimeSpan.Zero, cancellationToken);
             Assert.Equal(2, sync.Partition.Symbols.Count);
             Assert.Equal(2, sync.Partition.Nodes.Count);
             Assert.Empty(sync.Partition.Accounts);
-            Assert.Throws<ArgumentException>(() => new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Price" }, _ => ValueTask.FromResult<string?>(null), Json));
+            Assert.Throws<ArgumentException>(() => new LedgerSyncClient(http, new ReplicaLedger(), tenant, new[] { "Price" }, Development, Json));
         }
 
         /// <summary>
@@ -159,6 +159,12 @@ namespace AtlasLedger.Tests
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             options.Converters.Add(new JsonStringEnumConverter());
             return options;
+        }
+
+        private static ValueTask Development(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
+        {
+            request.Headers.Add(DevelopmentCallers.Header, DevelopmentCallers.Tool);
+            return ValueTask.CompletedTask;
         }
 
         private HttpClient Http()
