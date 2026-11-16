@@ -1,4 +1,4 @@
-// <copyright file="PartitionEmitter.cs" company="Tangent Atlas">
+﻿// <copyright file="PartitionEmitter.cs" company="Tangent Atlas">
 //    Copyright © Tangent Atlas. All rights reserved.
 // </copyright>
 // <author>Donald Airey</author>
@@ -82,6 +82,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line("private readonly global::System.Collections.Generic.Dictionary<object, int> journalPositions = new global::System.Collections.Generic.Dictionary<object, int>(global::System.Collections.Generic.ReferenceEqualityComparer.Instance);");
                 writer.Line("private int supersededJournalEntries;");
                 writer.Line("private long journalHorizon;");
+                writer.Line("private bool cutInFlight;");
                 writer.Line("private global::System.Threading.Tasks.TaskCompletionSource? commitWaiter;");
                 writer.Line($"private static readonly bool[] PersistedTables = {{ {string.Join(", ", transactional.Select(table => ModelShape.IsDurable(table) ? "true" : "false"))} }};");
             }
@@ -108,6 +109,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Open();
                 writer.Line("this.TenantId = tenantId;");
                 writer.Line("this.usesWriteBehind = usesWriteBehind;");
+                writer.Line("this.Epoch = global::System.Guid.NewGuid();");
                 writer.Close();
             }
             else
@@ -120,6 +122,12 @@ namespace Bellerophon.Generator.Emitters
             writer.Line();
             writer.Summary("Gets the tenant.");
             writer.Line("public global::System.Guid TenantId { get; }");
+            if (shape.IsPrimary)
+            {
+                writer.Line();
+                writer.Summary("Gets this partition's epoch: new each time the partition is created or recovered. Ephemeral rows are rebuilt after a restart and can take sequences a reader already saw, so a reader that sees a different epoch starts again from a snapshot.");
+                writer.Line("public global::System.Guid Epoch { get; }");
+            }
             writer.Line();
             writer.Summary("Gets the tenant's lock. A transaction holds it; hold it yourself (with a lock statement) to walk the graph consistently. It is reentrant.");
             writer.Line("public global::System.Threading.Lock SyncRoot => this.syncRoot;");
@@ -238,10 +246,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line("this.CheckOpen(token);");
                 writer.Line("foreach (var entry in this.undoLog)");
                 writer.Open();
-                writer.Line("if (PersistedTables[entry.Table])");
-                writer.Open();
                 writer.Line("this.AppendToJournal(entry);");
-                writer.Close();
                 writer.Close();
                 writer.Line();
                 writer.Line("if (this.usesWriteBehind)");
@@ -264,6 +269,10 @@ namespace Bellerophon.Generator.Emitters
                 writer.Close();
                 writer.Line();
                 writer.Line("var hasChanges = this.dirtyRows.Count > 0;");
+                writer.Line();
+                writer.Line("// Nothing waiting to be saved and no cut being saved: everything committed is as durable as it will be (the");
+                writer.Line("// commit changed only ephemeral rows, or nothing), so it is durable now rather than at the next save.");
+                writer.Line("var durableNow = this.usesWriteBehind && !hasChanges && !this.cutInFlight;");
                 writer.Line("this.undoLog.Clear();");
                 writer.Line("this.openTransaction = 0;");
                 writer.Line("this.syncRoot.Exit();");
@@ -272,6 +281,10 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line("if (hasChanges)");
                 writer.Open();
                 writer.Line("this.SignalChanges();");
+                writer.Close();
+                writer.Line("else if (durableNow)");
+                writer.Open();
+                writer.Line("this.AdvanceDurable(committed);");
                 writer.Close();
                 writer.Line();
                 writer.Line("if (committed > previous)");
@@ -438,7 +451,7 @@ namespace Bellerophon.Generator.Emitters
         private static void EmitShortcuts(ModelShape shape, TableModel table, CodeWriter writer)
         {
             var row = shape.RowType(table);
-            var durable = ModelShape.IsDurable(table);
+            var durable = ModelShape.IsModeled(table);
             var version = durable ? ", long rowVersion" : string.Empty;
             var versionArgument = durable ? ", rowVersion" : string.Empty;
             void Shortcut(string summary, string signature, string call)
@@ -579,7 +592,7 @@ namespace Bellerophon.Generator.Emitters
             CheckUniquesFree(shape, table, writer, "row", "row", insert: true);
             var parents = ResolveParents(shape, table, writer, "row", movableOnly: false);
             writer.Line("row.TenantId = this.TenantId;");
-            if (ModelShape.IsDurable(table))
+            if (ModelShape.IsModeled(table))
             {
                 writer.Line("row.RowVersion = ++this.sequence;");
             }
@@ -591,7 +604,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"Link{shape.HelperName(table, reference)}(row, {variable});");
             }
 
-            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Inserted, row, null, {(ModelShape.IsDurable(table) ? "row.RowVersion" : "0")}));");
+            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Inserted, row, null, {(ModelShape.IsModeled(table) ? "row.RowVersion" : "0")}));");
             writer.Line("return row;");
             writer.Close();
         }
@@ -621,7 +634,7 @@ namespace Bellerophon.Generator.Emitters
             writer.Line($"throw new {InvalidOperation}(\"Pass the changes as a new row: the stored row must not be changed directly, or the change could not be undone.\");");
             writer.Close();
             writer.Line();
-            if (ModelShape.IsDurable(table))
+            if (ModelShape.IsModeled(table))
             {
                 writer.Line("if (row.RowVersion != changes.RowVersion)");
                 writer.Open();
@@ -654,7 +667,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"row.{Names.Identifier(column.Name)} = changes.{Names.Identifier(column.Name)};");
             }
 
-            if (ModelShape.IsDurable(table))
+            if (ModelShape.IsModeled(table))
             {
                 writer.Line("row.RowVersion = ++this.sequence;");
             }
@@ -665,7 +678,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"Link{shape.HelperName(table, reference)}(row, {variable});");
             }
 
-            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Updated, row, before, {(shape.IsPrimary && ModelShape.IsDurable(table) ? "row.RowVersion" : "0")}));");
+            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Updated, row, before, {(shape.IsPrimary && ModelShape.IsModeled(table) ? "row.RowVersion" : "0")}));");
             writer.Line("return row;");
             writer.Close();
         }
@@ -673,7 +686,7 @@ namespace Bellerophon.Generator.Emitters
         private static void EmitDelete(ModelShape shape, TableModel table, CodeWriter writer)
         {
             var field = shape.TableField(table);
-            var durable = ModelShape.IsDurable(table);
+            var durable = ModelShape.IsModeled(table);
             writer.Line();
             writer.Line($"internal bool Delete{table.Name}Core({shape.KeyParameters(table)}{(durable ? ", long rowVersion" : string.Empty)})");
             writer.Open();
@@ -764,7 +777,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"Link{shape.HelperName(table, reference)}(row, {variable});");
             }
 
-            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Updated, row, before, {(shape.IsPrimary && ModelShape.IsDurable(table) ? "row.RowVersion" : "0")}));");
+            writer.Line($"this.undoLog.Add(new UndoEntry({TableId(table)}, Updated, row, before, {(shape.IsPrimary && ModelShape.IsModeled(table) ? "row.RowVersion" : "0")}));");
             writer.Line("return row;");
             writer.Close();
             writer.Line();
@@ -844,7 +857,7 @@ namespace Bellerophon.Generator.Emitters
 
             RemoveUniques(shape, table, writer, "row");
             writer.Line($"this.{shape.TableField(table)}.Remove({shape.KeyValue(table, "row")});");
-            writer.Line(shape.IsPrimary && ModelShape.IsDurable(table)
+            writer.Line(shape.IsPrimary && ModelShape.IsModeled(table)
                 ? $"this.undoLog.Add(new UndoEntry({TableId(table)}, Deleted, row, null, ++this.sequence));"
                 : $"this.undoLog.Add(new UndoEntry({TableId(table)}, Deleted, row, null, 0));");
             writer.Close();
@@ -892,7 +905,7 @@ namespace Bellerophon.Generator.Emitters
                 writer.Line($"row.{Names.Identifier(column.Name)} = before.{Names.Identifier(column.Name)};");
             }
 
-            if (ModelShape.IsDurable(table))
+            if (ModelShape.IsModeled(table))
             {
                 writer.Line("row.RowVersion = before.RowVersion;");
             }

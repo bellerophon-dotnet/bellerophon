@@ -20,7 +20,7 @@ namespace Bellerophon.Generator.Emitters
         /// <returns>The source text.</returns>
         public static string Emit(ModelShape shape)
         {
-            var tables = shape.Tables.Where(table => table.Persistence == Persistence.Durable).ToList();
+            var tables = shape.Tables.Where(ModelShape.IsModeled).ToList();
             var store = $"{shape.Name}Store";
             var task = "global::System.Threading.Tasks.Task";
             var token = "global::System.Threading.CancellationToken cancellationToken";

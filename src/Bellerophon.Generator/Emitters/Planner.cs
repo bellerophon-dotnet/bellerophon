@@ -24,7 +24,7 @@ namespace Bellerophon.Generator.Emitters
             var names = new List<string>();
             foreach (var table in resolved.Model.Tables)
             {
-                if (role.IsPrimary || (table.IsSynced && table.Persistence == Persistence.Durable))
+                if (role.IsPrimary || (table.IsSynced && ModelShape.IsModeled(table)))
                 {
                     names.Add(table.Name);
                 }
@@ -47,7 +47,7 @@ namespace Bellerophon.Generator.Emitters
 
             foreach (var table in resolved.Model.Tables)
             {
-                if (table.Persistence != Persistence.Durable)
+                if (!ModelShape.IsModeled(table))
                 {
                     continue;
                 }
@@ -72,7 +72,8 @@ namespace Bellerophon.Generator.Emitters
                     new EquatableArray<KeyPart>(key),
                     table.Access.Read,
                     table.Access.Write,
-                    table.WriteMode == WriteMode.AppendOnly));
+                    table.WriteMode == WriteMode.AppendOnly,
+                    table.WriteMode == WriteMode.ServerOnly));
             }
 
             return inputs;
@@ -88,7 +89,7 @@ namespace Bellerophon.Generator.Emitters
             {
                 foreach (var table in resolved.Model.Tables)
                 {
-                    if (table.Persistence == Persistence.Durable)
+                    if (ModelShape.IsModeled(table))
                     {
                         policies.Add(new PolicyPlan(table.Name, table.Access.Read, table.Access.Write));
                     }

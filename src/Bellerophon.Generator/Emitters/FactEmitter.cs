@@ -27,7 +27,7 @@ namespace Bellerophon.Generator.Emitters
         public static string Emit(ModelShape shape, TableModel table)
         {
             var fact = $"{table.Name}Fact";
-            var isDurable = ModelShape.IsDurable(table);
+            var isDurable = ModelShape.IsModeled(table);
             var columns = shape.DtoColumns(table).ToList();
             var writer = new CodeWriter();
             writer.Header();

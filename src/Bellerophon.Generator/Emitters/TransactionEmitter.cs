@@ -53,7 +53,7 @@ namespace Bellerophon.Generator.Emitters
             foreach (var table in shape.Tables.Where(table => table.Concurrency != ConcurrencyMode.LatestValue))
             {
                 var row = shape.RowType(table);
-                var durable = ModelShape.IsDurable(table);
+                var durable = ModelShape.IsModeled(table);
                 if (shape.IsPrimary)
                 {
                     writer.Line();

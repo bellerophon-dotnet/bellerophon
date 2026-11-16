@@ -45,15 +45,30 @@ namespace Bellerophon.Generator.Emitters
         public string PartitionName => $"{this.Model.Name}Partition";
 
         /// <summary>
-        /// Gets the tables this role includes: every table for the server; synced durable tables for the client.
+        /// Gets the tables this role includes: every table for the server; synced modeled tables for the client; durable
+        /// tables for the database schema.
         /// </summary>
         public IEnumerable<TableModel> Tables => this.Model.Tables.Where(this.Includes);
 
         public bool Includes(TableModel table) =>
             this.IsPrimary
-            || (this.Role.IsSchema ? table.Persistence == Persistence.Durable : table.IsSynced && table.Persistence == Persistence.Durable);
+            || (this.Role.IsSchema ? IsDurable(table) : table.IsSynced && IsModeled(table));
 
+        /// <summary>
+        /// Gets a value indicating whether a table is saved to the database (and loaded from it at startup).
+        /// </summary>
         public static bool IsDurable(TableModel table) => table.Persistence == Persistence.Durable;
+
+        /// <summary>
+        /// Gets a value indicating whether a table is part of the transactional model, durable or ephemeral: row versions,
+        /// the change feed, transfer objects, the API and sync.  Only latest-value tables (lock-free price stores) are not.
+        /// </summary>
+        public static bool IsModeled(TableModel table) => table.Concurrency != ConcurrencyMode.LatestValue;
+
+        /// <summary>
+        /// Gets a value indicating whether clients may write a table through the API (controller and batch).
+        /// </summary>
+        public static bool IsApiWritable(TableModel table) => IsModeled(table) && table.WriteMode != WriteMode.ServerOnly;
 
         public TableModel Table(string name) => this.Model.FindTable(name)!;
 
@@ -182,12 +197,12 @@ namespace Bellerophon.Generator.Emitters
         public string RowType(TableModel table) => Names.Identifier(table.Name);
 
         /// <summary>
-        /// Gets the tables that become facts for a rules engine: on the server, durable and latest-value tables not marked
+        /// Gets the tables that become facts for a rules engine: on the server, every table not marked
         /// <c>"facts": false</c>.
         /// </summary>
         public IEnumerable<TableModel> FactTables =>
             this.IsPrimary
-                ? this.Tables.Where(table => table.HasFacts && (IsDurable(table) || table.Concurrency == ConcurrencyMode.LatestValue))
+                ? this.Tables.Where(table => table.HasFacts)
                 : Enumerable.Empty<TableModel>();
 
         /// <summary>
