@@ -10,7 +10,7 @@ Most of v4 is now built. **The solution's README is the detailed reference for w
 
 Status labels: **Built** (implemented and tested), **Changed** (built differently from v4; the reason is in Part I), **Planned** (specified, not built), **Dropped** (no longer wanted).
 
-**Where it stands.** Generator version 0.4.0, on .NET 10. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
+**Where it stands.** Generator version 0.5.0, on .NET 10. Projects: `Bellerophon.Modeling`, `Bellerophon.Generator`, `Bellerophon.Runtime`, `Bellerophon.SqlServer`, `Bellerophon.Rules`, `Bellerophon.Rules.NRules`, `Bellerophon.Tool`; samples `AtlasLedger.Server` (Primary), `AtlasLedger.Schema` (Schema), `AtlasLedger.Client` (Replica), `TangentAtlas` (the enums); tests `Bellerophon.Tests`, `AtlasLedger.Tests` (end to end), and `AtlasLedger.Persistence.Tests` (SQL Server). The server persists to SQL Server through the generated writer and recovers every tenant from it at startup. The solution builds with no warnings with naming rules and xUnit's analyzers enforced, and the NRules adapter is built and tested against NRules 1.0.4.
 
 ---
 
@@ -85,12 +85,12 @@ The README's "The model format" section is the reference. Summary with status:
 | `description` | Built | Documentation. |
 | `facts` | Built | `false` keeps the table out of the rules engine's working memory. |
 | `key` | Built | The primary key; key columns are immutable; supplied by the client. |
-| `persistence` | Built | `Durable` or `Ephemeral`. |
+| `persistence` | Built | `Durable` or `Ephemeral`. From 0.5.0 an ephemeral table is a full member of the model (row versions, change feed, facts, transfer object, controller, Replica) that is never written to the database. |
 | `plural` | Built | Irregular plural for navigation names. |
 | `references` | Built | Parent references (B7). |
 | `sync` | Built | `false` keeps the table off the client. |
 | `unique` | Built | Unique constraints (B8). |
-| `writeMode` | Built | `Mutable` or `AppendOnly`. |
+| `writeMode` | Built | `Mutable`, `AppendOnly`, or `ServerOnly` (0.5.0: written only by server code; read-only through the API, left out of exports). |
 | `api` | Planned | `Full`, `ReadOnly`, `None`. |
 | `auditReads` | Planned | Generated reads emit audit events. |
 | `deprecated`, `renamedFrom` | Planned | Schema evolution (Part E). |
@@ -126,7 +126,7 @@ Names and types resolve; reserved names are refused; decimals declare precision 
 
 **D5. Constraints — Built.** References, unique values, delete rules, immutable keys and tenant; `ConstraintException` and `DBConcurrencyException`. A stored row cannot be passed as its own changes; a row cannot change tenant; an all-zero guid key is refused.
 
-**D6. Sequence and change feed — Built.** One sequence per partition; a coalesced journal (`ReadChangesSince`, `TakeSnapshot`, `WaitForCommitAsync`, `TrimJournal`, `JournalHorizon`); `LedgerChanges.ToFacts()` (parents first, retractions children first).
+**D6. Sequence and change feed — Built.** One sequence per partition; a coalesced journal (`ReadChangesSince`, `TakeSnapshot`, `WaitForCommitAsync`, `TrimJournal`, `JournalHorizon`); `LedgerChanges.ToFacts()` (parents first, retractions children first). From 0.5.0: ephemeral tables are journaled; each partition has an `Epoch` (new when created or recovered); a commit of ephemeral rows only is durable at once when nothing earlier awaits a flush; `Replace{Plural}(rows)` makes a table hold exactly the rows given, touching only those that differ.
 
 **D7. Write-behind persistence — Built.** The hooks: dirty-set coalescing, `TakeCut()` into `LedgerCut` (DTOs per table, changed and deleted), `MarkDurable`, `WaitUntilDurableAsync`, `WaitForChangesAsync`, `Fault`, `PendingChangeCount`, `TablesInDependencyOrder`. The flusher is the host's (the sample server's `LedgerFlusher`, with retry and fail-stop), and in the sample server it writes to SQL Server through the generated writer. The writer: `{Model}SqlDatabase.WriteAsync`, generated when the project references `Bellerophon.SqlServer`: table-valued-parameter bulk writes, an UPDATE then an INSERT per table (no MERGE), the deletes, and the watermark, in one round trip and one database transaction (`XACT_ABORT ON`); an overload writes inside the caller's transaction, so a broker cursor can commit with the cut it covers. Table types are named after a hash of their definition and created at startup if missing. Values that would not fit their columns (length, precision, scale) are refused in memory as constraint violations, so the database never refuses or rounds one. Tested against SQL Server LocalDB (`AtlasLedger.Persistence.Tests`): 10,000 inserted rows written in 95 ms, 5,000 updates in 56 ms, 10,000 rows loaded in 137 ms. **The database schema has primary keys only** (D13), and a cut holds each key at most once, so the order of the writes does not matter (tested: `AnyWriteOrderOfACutGivesTheSameDatabase`). Writes coalesce per row; they are not replayed in commit order, which would gain nothing without constraints and would lose the coalescing. `InMemoryLedgerDatabase` remains as a test stand-in.
 
@@ -134,7 +134,7 @@ Names and types resolve; reserved names are refused; decimals declare precision 
 
 **D9. API controllers — Built, routes changed.** `v{major}/tenants/{tenantId}/{table}` with list, get by key, insert, update, and delete (`?rowVersion=`); 412, 422, and 400 mapped by `MapModelExceptionsAttribute`; every write answers only once durable. `I{Table}Store` and `LedgerStore`. *Dropped:* the `Idempotency-Key` header (identical re-inserts and version checks make retries safe; open question in the architecture document). Multi-word tables route in kebab case (`order-intent`). *Planned:* `traceId` on every problem response; filtering and sorting (deferred).
 
-**D10. Sync endpoint — Planned.** Pull with long polling: `GET v{major}/tenants/{tenantId}/changes?since={sequence}` returns each changed row once in its latest state and a tombstone per deleted key, up to the durable watermark; waits for the next durable commit when there is nothing new; a reader behind the journal horizon is told to reload from a snapshot. The journal already provides each piece.
+**D10. Sync endpoint — Built (0.5.0).** Pull with long polling: `GET v{major}/tenants/{tenantId}/changes?since={sequence}&epoch={epoch}&tables={A,B}&wait={seconds}` returns each changed row once in its latest state and each deleted row, up to the durable watermark, for the tables the client lists (each authorized by its read scope); waits up to `wait` seconds for the next durable commit when there is nothing new; a client that is new, behind the journal horizon, or following another epoch gets a snapshot. See the README's Client sync.
 
 **D11. Authorization — Built.** `Ledger` implements `ITenantMembership` from each tenant's User table; `LedgerAccessPolicies` per table; 401, 404 (not a user of the tenant), 403 (missing scope); tools skip membership only when the token is an application's (`idtyp` = `app`, no scope) and its client ID is in `Tools:ClientIds` (placeholders until the registrations exist), and every tool access is logged; `LedgerTenantsController` (`GET v{major}/me/tenants`). With Entra, `idtyp` must be added as an optional access-token claim on the API registration. *Planned:* a change-feed publisher of (identity, tenant) pairs, with no personal data, for the control plane's routing index.
 
@@ -144,7 +144,7 @@ Names and types resolve; reserved names are refused; decimals declare precision 
 
 **D14. Rules adapters — Built.** One immutable fact per table (`AccountFact`): equal by key, `RowVersion` carried but not compared, `partial` for computed properties; tables with `"facts": false` and the User table excluded. With `Bellerophon.Rules` referenced: `LedgerRulesTenant` (snapshot, changes since a sequence, conflated latest values, commit and price waits, decisions applied in one transaction) and `LedgerRuleActions` (where rules record decisions).
 
-**D15. Replica — Built; sync client Planned.** Synced tables only; `Apply{Table}` and `Remove{Table}` in transactions; `Ledger.AddContractHeaders`. *Planned:* a sync client using D10 that tracks the last applied sequence per tenant and handles reload and 426.
+**D15. Replica — Built, with its sync client (0.5.0).** Synced tables only; `Apply{Table}` and `Remove{Table}` in transactions; `Ledger.AddContractHeaders`. `{Model}SyncClient` follows one tenant through D10: the tables a view asks for and their parents, each response applied in one transaction, `Synced` after each change, a snapshot on reset, an `authorize` callback per request, network failures retried, and refusals (401, 403, 404, 426) surfaced.
 
 **D16. Stand-alone mode — Planned.** A single partition, no tenant column, for the control plane.
 
@@ -235,4 +235,4 @@ Changed or dropped from v4: **G1 `AsyncTransaction`** — Dropped (the transacti
 | 3 — Partitions and the lock model | D2–D4, D6, D9, D17, D10 | Built except D10 |
 | 4 — Write-behind persistence | D7, D8, D13 | Built; the server writes to SQL Server and recovers from it; crash injection in a running server to do |
 | 5 — Real-time tier | D2 latest values, D14, D22; H1–H3 | Engine built; feeds, orders, router, D22 to do |
-| Client | D15, D21 | Mirror built; sync client and typed API client to do |
+| Client | D15, D21 | Mirror and sync client built; typed API client to do |
