@@ -24,7 +24,7 @@
       The tests compile the generated code in memory, so they need a compiler at least as new as the C# the generated code
       targets (C# 13 or later; .NET 10 ships Roslyn 5.0).  The generator itself stays on 4.8.0 so older hosts can load it.
     -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
   </ItemGroup>
 
   <ItemGroup>
