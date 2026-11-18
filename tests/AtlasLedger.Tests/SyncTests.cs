@@ -69,7 +69,9 @@ namespace AtlasLedger.Tests
             await this.ApplyAsync(tenant, $$"""{ "operations": [ { "action": "Insert", "table": "Symbol", "row": { "scheme": "Ticker", "code": "SMTH", "nodeId": "{{Node}}" } } ] }""");
             Assert.True(await sync.SyncAsync(TimeSpan.Zero, cancellationToken));
             Assert.Equal(3, sync.Partition.Symbols.Count);
-            Assert.Equal(new[] { "Symbol" }, synced[^1].Tables);
+            // The compliance rules run on their own cycle, so an alert about the new symbol may arrive in the same sync.
+            Assert.Contains("Symbol", synced[^1].Tables);
+            Assert.All(synced[^1].Tables, table => Assert.Contains(table, new[] { "Symbol", "Alert" }));
             Assert.False(synced[^1].IsReset);
 
             var symbol = sync.Partition.Symbols.Single(row => row.Code == "SMTH");
