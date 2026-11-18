@@ -99,26 +99,30 @@ namespace Bellerophon.Tests
             var handler = Delegate.CreateDelegate(handlerType, counter, typeof(Counter).GetMethod(nameof(Counter.Count))!.MakeGenericMethod(handlerType.GetGenericArguments()[0]));
             eventInfo.AddEventHandler(partition, handler);
 
+            // Publish once first, so the timed calls don't include compiling the dynamic call site.
+            partition.PublishPrice(Make("Price", ("Symbol", "MSFT"), ("Last", 1m), ("AsOf", DateTimeOffset.UtcNow)));
+
             var partitionLock = Assert.IsType<System.Threading.Lock>((object)partition.SyncRoot);
             var holder = new System.Threading.Thread(() =>
             {
                 lock (partitionLock)
                 {
-                    System.Threading.Thread.Sleep(200);
+                    System.Threading.Thread.Sleep(1000);
                 }
             });
             holder.Start();
-            System.Threading.Thread.Sleep(50);
+            System.Threading.Thread.Sleep(100);
             var watch = System.Diagnostics.Stopwatch.StartNew();
             partition.PublishPrice(Make("Price", ("Symbol", "AAPL"), ("Last", 100m), ("AsOf", DateTimeOffset.UtcNow)));
             partition.PublishPrice(Make("Price", ("Symbol", "AAPL"), ("Last", 101m), ("AsOf", DateTimeOffset.UtcNow)));
             watch.Stop();
             holder.Join();
-            published = counter.Calls;
+            published = counter.Calls - 1;
 
-            Assert.True(watch.ElapsedMilliseconds < 100, $"Publishing waited {watch.ElapsedMilliseconds} ms for the partition's lock.");
+            // The lock is held for a second; a slow test machine can take a few hundred milliseconds, but not that.
+            Assert.True(watch.ElapsedMilliseconds < 500, $"Publishing waited {watch.ElapsedMilliseconds} ms for the partition's lock.");
             Assert.Equal(101m, (decimal)partition.FindPrice("AAPL").Last);
-            Assert.Single(((System.Collections.IEnumerable)partition.Prices).Cast<object>());
+            Assert.Equal(2, ((System.Collections.IEnumerable)partition.Prices).Cast<object>().Count());
             Assert.Equal(2, published);
         }
 

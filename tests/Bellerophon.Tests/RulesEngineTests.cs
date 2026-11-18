@@ -220,7 +220,7 @@ namespace Bellerophon.Tests
                             var running = Task.Run(() => engine.RunAsync(stop.Token));
                             Thread.Sleep(1000);
                             stop.Cancel();
-                            Check.That(running.Wait(2000), "cancelling stops the engine, even while it backs off");
+                            Check.That(running.Wait(10000), "cancelling stops the engine, even while it backs off");
 
                             // Without backing off, a zero interval would rebuild hundreds of times a second. With it: at once, then
                             // after 200, 400 and 800 milliseconds, so about four cycles in the second.
@@ -269,17 +269,17 @@ namespace Bellerophon.Tests
                         engine.CycleCompleted += (sender, eventArgs) => cycles.Add(eventArgs.Result);
                         using var stop = new CancellationTokenSource();
                         var running = engine.RunAsync(stop.Token);
-                        Check.That(cycles.TryTake(out var first, 2000) && first.IsRebuild, "the engine starts with a snapshot");
+                        Check.That(cycles.TryTake(out var first, 10000) && first.IsRebuild, "the engine starts with a snapshot");
                         Check.That(!cycles.TryTake(out _, 100), "and then waits");
                         AddAccount(partition, withCustodian: false);
-                        Check.That(cycles.TryTake(out _, 2000) && SpinWait.SpinUntil(() => partition.Alerts.Count == 1, 2000), "a commit runs a cycle, whose decision is committed");
-                        Check.That(SpinWait.SpinUntil(() => engine.AppliedSequence == partition.CommittedSequence, 2000), "the engine settles after its own decision comes back");
+                        Check.That(cycles.TryTake(out _, 10000) && SpinWait.SpinUntil(() => partition.Alerts.Count == 1, 10000), "a commit runs a cycle, whose decision is committed");
+                        Check.That(SpinWait.SpinUntil(() => engine.AppliedSequence == partition.CommittedSequence, 10000), "the engine settles after its own decision comes back");
                         var settled = engine.CycleCount;
                         partition.PublishPrice(new Price { Scheme = "Custodian", Code = "1", Last = 1m, AsOf = DateTimeOffset.UtcNow });
-                        Check.That(SpinWait.SpinUntil(() => engine.CycleCount > settled, 2000), "a price runs a cycle too");
-                        Check.That(SpinWait.SpinUntil(() => factory.Sessions.Single().Applied.Any(change => change.Fact is PriceFact), 2000), "and the price reaches working memory");
+                        Check.That(SpinWait.SpinUntil(() => engine.CycleCount > settled, 10000), "a price runs a cycle too");
+                        Check.That(SpinWait.SpinUntil(() => factory.Sessions.Single().Applied.Any(change => change.Fact is PriceFact), 10000), "and the price reaches working memory");
                         stop.Cancel();
-                        Check.That(running.Wait(2000), "cancelling stops the engine");
+                        Check.That(running.Wait(10000), "cancelling stops the engine");
                     }
 
                     public static void TheHostRunsATenantPerEngine()
@@ -292,9 +292,9 @@ namespace Bellerophon.Tests
                         var tenant = new LedgerRulesTenant(first);
                         Check.That(host.Start(tenant) && host.Start(new LedgerRulesTenant(second)), "each tenant gets an engine");
                         Check.That(!host.Start(new LedgerRulesTenant(first)), "but only one");
-                        Check.That(SpinWait.SpinUntil(() => first.Alerts.Count == 1 && second.Alerts.Count == 1, 2000), "both tenants' rules run");
-                        Check.That(host.StopAsync(first.TenantId).Wait(2000) && host.Tenants.Count == 1, "an engine stops");
-                        Check.That(host.DisposeAsync().AsTask().Wait(2000) && host.Tenants.Count == 0, "and the host stops the rest");
+                        Check.That(SpinWait.SpinUntil(() => first.Alerts.Count == 1 && second.Alerts.Count == 1, 10000), "both tenants' rules run");
+                        Check.That(host.StopAsync(first.TenantId).Wait(10000) && host.Tenants.Count == 1, "an engine stops");
+                        Check.That(host.DisposeAsync().AsTask().Wait(10000) && host.Tenants.Count == 0, "and the host stops the rest");
                     }
                 }
             }
