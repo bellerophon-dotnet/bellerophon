@@ -193,7 +193,8 @@ namespace Bellerophon.Tests
         [Fact]
         public void SavedTablesCannotReferenceEphemeralOnes()
         {
-            var text = Model.Replace(
+            // Line endings follow the checkout (CRLF on Windows), so normalize them before matching.
+            var text = Model.ReplaceLineEndings("\n").Replace(
                 "\"key\": [\"AccountId\"]\n",
                 "\"key\": [\"AccountId\"],\n      \"references\": { \"Position\": { \"columns\": [\"AccountId\", \"Name\"] } }\n");
 
